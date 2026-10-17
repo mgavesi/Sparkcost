@@ -4,6 +4,7 @@
 
 Endpoints:
     /                     dashboard
+    /logo.jpg             logo (static/logo.jpg)
     /api/summary          JSON report (?refresh=1 re-downloads the price list, ?local=KEY local-model override)
     /api/capex?value=X    saves the total fleet investment to data/config.yaml
     /api/tariff?value=X   saves the energy tariff eur_per_kwh to data/config.yaml
@@ -21,6 +22,7 @@ from .localcost import report, save_capex, save_tariff, save_hours, save_amort_y
 
 PORT = 8900
 
+LOGO = Path(__file__).resolve().parent / "static" / "logo.jpg"
 # Trend palette: orange, cyan, violet, magenta, peach, light cyan
 PALETTE = ["#ff6a45", "#2ec8e8", "#8b7cf8", "#c76bd8", "#ffb08a", "#8adfff"]
 
@@ -30,7 +32,7 @@ HTML = """<!doctype html><html><head><meta charset="utf-8">
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
 font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px 24px 56px}
 h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
-.hdr{margin-bottom:14px}.hdr .brand{font-size:30px;font-weight:700;letter-spacing:-0.5px}.hdr .brand::first-letter{color:var(--acc)}
+.hdr{margin-bottom:14px}.hdr img{height:110px;max-width:420px;object-fit:contain;display:block}
 .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
 .card{background:var(--card);border:1px solid var(--b);border-radius:10px;padding:14px}
@@ -67,7 +69,7 @@ td input.pr:disabled{color:var(--mut);border-color:transparent}
 .footer{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--b);
 padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
-<div class="hdr"><span class="brand">&#9889; sparkcost</span></div>
+<div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
 <div class="cards" id="cards"></div>
 
 <div class="bar">
@@ -465,7 +467,7 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 self._send(500, json.dumps({"error": str(e)}).encode(),
                            "application/json")
-        elif False:  # logo removed for the open-source release
+        elif u.path == "/logo.jpg":
             try:
                 self._send(200, LOGO.read_bytes(), "image/jpeg")
             except OSError:

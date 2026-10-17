@@ -1,4 +1,6 @@
-# sparkcost ⚡
+<div align="center">
+  <img src="docs/logo.jpg" alt="sparkcost" width="560">
+</div>
 
 **Token economics: local inference on an NVIDIA DGX Spark (GB10) fleet vs cloud LLMs.**
 
