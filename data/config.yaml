@@ -1,0 +1,37 @@
+# sparkcost — configuration (edit freely)
+n_sparks: 2              # number of active Spark units in the fleet (multiplies energy + capex)
+eur_per_kwh: 0.22        # Eurostat Austria non-household 2025: 0.241 incl. taxes; 0.22 conservative (P38)
+usd_eur: 0.93
+hardware_total_eur: 8800.0
+amort_years: 5.0
+depreciation: true
+idle_watts: 17           # idle power per single unit (sampled 16.9-17.9W, 2026-10-14)
+active_watts: null       # null = use power measured from nvidia-smi (per unit)
+assumed_tok_s: 40        # used if the server is idle in the measurement window
+always_on: true          # machines always on 24/7 (idle on all hours)
+hours_per_day: 24.0
+in_out_ratio: 3          # typical input:output token ratio (affects the cloud comparison)
+cache_hit_rate: 0.9      # share of prompt tokens served from cache in cloud cache scenarios
+
+# Consumer subscriptions USD/month for closed-weight models — used in the break-even.
+# For the comparison against HEAVY local usage, each vendor's MAXIMUM performance tier
+# counts (owner decision 2026-10-15), i.e. the most expensive plan: worst case. Official
+# pages (claude.ai/upgrade, chatgpt.com/#pricing, one.google.com/ai) behind login:
+# prices verified 2026-10-15 via costbench (Google AI Ultra 20x 199.99, 10 Oct 2026),
+# aipricing.guru and techverdict (ChatGPT Pro 200, Claude Max 20x 200), ai-toolbox
+# (SuperGrok Heavy 300). Note: an unconfirmed source mentions an OpenAI tier at $500 —
+# stays Pro 200 until verified. Edit freely.
+subscriptions:
+  OpenAI:
+    - {plan: "ChatGPT Pro", usd: 200}
+  Anthropic:
+    - {plan: "Claude Max 20x", usd: 200}
+  Google:
+    - {plan: "Google AI Ultra 20x", usd: 199.99}
+  xAI:
+    - {plan: "SuperGrok Heavy", usd: 300}
+  # DeepSeek, Moonshot (Kimi), Qwen, Z.ai: open-weight/API → stay per-token
+# monthly volume for the break-even (optional): if uncommented, used instead of the
+# projection from the observed rate (which may reflect a peak)
+# monthly_prompt_m: 4000
+# monthly_gen_m: 40
