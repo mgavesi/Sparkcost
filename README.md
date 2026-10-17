@@ -4,6 +4,10 @@
 
 A self-hosted token-economics tool that answers one precise question: *given the tokens you actually generate, what would they cost in the cloud, and how long does the hardware take to pay for itself?* Nothing is estimated by hand: tokens come from real inference-server counters, power is sampled from `nvidia-smi`, cloud price lists are downloaded (LiteLLM catalog, cross-checked against aitokenprice.com), and the whole accounting is recomputed on every dashboard tick.
 
+![sparkcost dashboard](docs/screenshot.png)
+
+*The dashboard: live cards (tokens, fleet power, effective €/1M), monthly-cost comparison against the cloud peer set, investment break-even with payback times, and the cumulative "repaid so far" ledger.*
+
 ```
 ┌────────────┐   /metrics     ┌──────────────┐
 │ tensorfold │ ─────────────► │ collect.py   │  token counters + nvidia-smi

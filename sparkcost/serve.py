@@ -220,7 +220,7 @@ async function tick(force){ try{
   ['active units',(cfg.n_sparks||1)+' Spark',null,null],
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
   ['generated tokens (total)',fmt(+(d.ledger?d.ledger.gen_total:d.counters.gen_total)||0),null,null],
-  ['fleet power',(L.watts_fleet||0)+' W','power',PALETTE[0]],
+  ['fleet power',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
   ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M','eff',PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
   ['tariff',cfg.eur_per_kwh+' €/kWh',null,null]];
