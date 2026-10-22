@@ -18,7 +18,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_price, clear_price
+from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_price, clear_price
+from .collect import save_fleet, test_fleet_host
 
 PORT = 8900
 
@@ -28,21 +29,26 @@ PALETTE = ["#ff6a45", "#2ec8e8", "#8b7cf8", "#c76bd8", "#ffb08a", "#8adfff"]
 
 HTML = """<!doctype html><html><head><meta charset="utf-8">
 <title>sparkcost</title><style>
-:root{--bg:#000;--card:#0d0d0f;--tx:#dbe4ee;--mut:#7d8ea0;--acc:#4ade80;--b:#1c1c22;--warn:#fbbf24}
+:root{--bg:#000;--card:#0d0d0f;--tx:#dbe4ee;--mut:#7d8ea0;--acc:#4ade80;--b:#1c1c22;--warn:#fbbf24;--thbg:#0f2a1c;--inputbg:#000}
+body.light{--bg:#eef1f5;--card:#fff;--tx:#1b2530;--mut:#5c6b7a;--acc:#0b8f4d;--b:#d7dde4;--warn:#b45309;--thbg:#e2f3ea;--inputbg:#fff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
 font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px 24px 56px}
 h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
-.hdr{margin-bottom:12px}.hdr img{height:44px;max-width:100%;object-fit:contain;display:block}
+.hdr{margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hdr img{height:44px;max-width:calc(100% - 60px);object-fit:contain;display:block}
+#themeBtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:5px 9px;font-size:15px;cursor:pointer;flex-shrink:0;line-height:1;margin:0}
 .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
-.card{background:var(--card);border:1px solid var(--b);border-radius:10px;padding:14px}
-.card .v{font-size:22px;font-weight:700}
-.card .l{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:1500px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.cards{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px 18px}
+.card .v{font-size:25px;font-weight:700}
+.card .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
 .card svg{display:block;margin-top:8px;width:100%;height:30px}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--b);border-radius:10px;overflow:hidden;margin-bottom:8px}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#0f2a1c;color:var(--acc);text-align:left;padding:10px 12px;border-bottom:1px solid var(--b)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:var(--thbg);color:var(--acc);text-align:left;padding:10px 12px;border-bottom:1px solid var(--b)}
 td{padding:8px 12px;border-bottom:1px solid var(--b)}tr:last-child td{border:none}
-tr.local td{background:#0f2a1c;color:var(--acc);font-weight:700}
+tr.local td{background:var(--thbg);color:var(--acc);font-weight:700}
 tr.mine td{outline:1px solid var(--acc)}
 tr.cheapest td{color:var(--warn)}
 td.num{text-align:right}th.num{text-align:right}
@@ -51,18 +57,28 @@ td .basis{color:var(--mut);font-size:10px}
 .side{width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px;position:sticky;top:16px}
 .side .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
 .field{display:flex;align-items:center;gap:6px;margin-top:2px}
-.field input,.side select{flex:1;min-width:0;background:#000;color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
+.field input,.side select{flex:1;min-width:0;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
 .field input:focus,.side select:focus{border-color:var(--acc);outline:none}
 .saved{color:var(--acc);font-size:11px;white-space:nowrap}
-.side button{display:block;width:100%;background:#000;color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:6px 0;font:inherit;font-size:12px;cursor:pointer;margin-top:10px}
+.side button{display:block;width:100%;background:var(--inputbg);color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:6px 0;font:inherit;font-size:12px;cursor:pointer;margin-top:10px}
 .side button:disabled{color:var(--mut);border-color:var(--b);cursor:wait}
+.fleetbox{margin-top:16px;border:1px solid var(--b);border-radius:8px;padding:8px 10px}
+.fleetbox summary{cursor:pointer;font-size:12px;color:var(--mut);user-select:none}
+.fleethint{color:var(--mut);font-size:10px;margin:6px 0}
+.frow{display:grid;grid-template-columns:1.2fr 62px 52px;gap:4px;margin:6px 0;border:1px solid var(--b);border-radius:6px;padding:6px}
+.frow input,.frow select{width:100%;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:6px;padding:4px 6px;font:inherit;font-size:11px;box-sizing:border-box}
+.frow button{display:inline-block;width:auto;padding:4px 8px;margin:0;font-size:11px}
+.fbtns{display:flex;gap:6px;align-items:center;margin-top:6px}
+.fbtns button{width:auto;display:inline-block;padding:6px 10px;margin:0;flex:0 0 auto}
+#fleetMsg{font-size:10px;color:var(--acc)}
+.fres{font-size:10px;color:var(--acc);grid-column:1/-1;min-height:12px}
 .side .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
 .main{flex:1;min-width:0}
 @media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static}}
 tr.hd-red th{background:#4a1520;color:#ffb08a}
 .bar .rt.on{color:var(--acc);border-color:var(--acc)}
 .bar .sep{flex:1}
-td input.pr{background:#000;color:var(--tx);border:1px solid transparent;border-radius:6px;
+td input.pr{background:var(--inputbg);color:var(--tx);border:1px solid transparent;border-radius:6px;
 padding:2px 6px;font:inherit;font-size:12px;text-align:right;width:72px}
 td input.pr:hover{border-color:var(--b)}td input.pr:focus{border-color:var(--acc);outline:none}
 td input.pr.edited{border-color:var(--warn);color:var(--warn)}
@@ -74,7 +90,7 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
 <div class="wrap">
 <aside class="side">
- <div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
+ <div class="hdr"><img src="/logo.jpg" alt="sparkcost"><button id="themeBtn" type="button" title="dark / light">&#9728;&#65039;</button></div>
  <span class="lbl">Investment &euro;</span>
  <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
  <span class="lbl">Energy &euro;/kWh</span>
@@ -94,6 +110,11 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
  <span id="locwarn"></span>
  <button id="resetBtn" title="Restore online price list">&#8634; Reset prices</button>
  <button id="refreshBtn">&#8635; Refresh prices</button>
+ <details class="fleetbox"><summary>&#9881; Cluster machines (per-host power)</summary>
+  <div class="fleethint">name + mode local/ssh + ip/port/user &middot; password stored server-side (0600, never shown) &mdash; empty = keep stored &middot; Save syncs n_sparks</div>
+  <div id="fleetRows"></div>
+  <div class="fbtns"><button id="fleetAdd" type="button">+ add</button><button id="fleetSave" type="button">Save</button><span id="fleetMsg"></span></div>
+ </details>
 </aside>
 <div class="main">
 <div class="cards" id="cards"></div>
@@ -152,15 +173,55 @@ function sparkline(key,color){
  const last=xy[xy.length-1];
  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
   <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0" stop-color="${color}" stop-opacity="0.5"/>
-   <stop offset="1" stop-color="${color}" stop-opacity="0.03"/>
-  </linearGradient></defs>
+   <stop offset="0" stop-color="${color}" stop-opacity="0.55"/>
+   <stop offset="1" stop-color="${color}" stop-opacity="0.04"/>
+  </linearGradient>
+  <filter id="f${gid}" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.2"/></filter></defs>
+  <path d="${area}" fill="${color}" opacity="0.22" filter="url(#f${gid})"/>
   <path d="${area}" fill="url(#${gid})"/>
   <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" opacity="0.95"
    style="filter:drop-shadow(0 0 3px ${color})"/>
   <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.2" fill="${color}"
    style="filter:drop-shadow(0 0 3px ${color})"/></svg>`;
 }
+
+const themeBtn=document.getElementById('themeBtn');
+function applyTheme(t){document.body.classList.toggle('light',t==='light');themeBtn.textContent=t==='light'?'🌙':'\u2600\uFE0F';try{localStorage.setItem('sc-theme',t)}catch(e){}}
+applyTheme((()=>{const p=new URLSearchParams(location.search).get('theme');
+ if(p==='light'||p==='dark')return p;
+ try{return localStorage.getItem('sc-theme')||'dark'}catch(e){return 'dark'}})());
+themeBtn.onclick=()=>applyTheme(document.body.classList.contains('light')?'dark':'light');
+
+let fleetCache=[],fleetLoaded=false;
+const escF=v=>String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function renderFleet(){
+ const box=document.getElementById('fleetRows');
+ box.innerHTML=fleetCache.map((h,i)=>`<div class="frow" data-i="${i}">
+  <input class="fname" placeholder="name" value="${escF(h.name)}">
+  <select class="fmode"><option value="local"${h.mode==='local'?' selected':''}>local</option><option value="ssh"${h.mode!=='local'?' selected':''}>ssh</option></select>
+  <input class="fport" placeholder="22" value="${escF(h.port||22)}">
+  <input class="fip" placeholder="ip" value="${escF(h.ip)}" style="grid-column:span 3">
+  <input class="fuser" placeholder="user" value="${escF(h.user)}">
+  <input class="fpass" type="password" placeholder="${h.has_password?'(stored)':'password'}" style="grid-column:span 3">
+  <button class="ftest" type="button">Test</button><button class="fdel" type="button">\u2715</button>
+  <span class="fres"></span></div>`).join('')||'<div class="fres">no machines yet \u2014 add one</div>';
+}
+function collectRow(row){return{name:row.querySelector('.fname').value.trim(),mode:row.querySelector('.fmode').value,ip:row.querySelector('.fip').value.trim(),port:parseInt(row.querySelector('.fport').value)||22,user:row.querySelector('.fuser').value.trim(),password:row.querySelector('.fpass').value};}
+function collectRows(){return[...document.querySelectorAll('#fleetRows .frow')].map(collectRow);}
+document.getElementById('fleetAdd').onclick=()=>{fleetCache.push({mode:'ssh',port:22});renderFleet();};
+document.getElementById('fleetSave').onclick=async()=>{
+ const r=await(await fetch('/api/fleet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hosts:collectRows()})})).json();
+ const el=document.getElementById('fleetMsg');
+ el.textContent=r.ok?'saved \u2713 \u2014 n_sparks synced':'error: '+(r.error||'?');
+ setTimeout(()=>el.textContent='',5000); if(r.ok){fleetLoaded=false;tick(true);} };
+document.getElementById('fleetRows').addEventListener('click',async e=>{
+ const row=e.target.closest('.frow'); if(!row)return;
+ if(e.target.classList.contains('fdel')){fleetCache.splice(+row.dataset.i,1);renderFleet();return;}
+ if(!e.target.classList.contains('ftest'))return;
+ const res=row.querySelector('.fres'); res.textContent='testing\u2026';
+ const r=await(await fetch('/api/fleet/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host:collectRow(row)})})).json();
+ res.textContent=r.ok?('\u2713 '+(+r.watts).toFixed(1)+' W'):('\u2715 '+(r.error||'fail'));
+});
 
 function buildLocalSelector(d){
  const sel=document.getElementById('locsel');
@@ -201,6 +262,7 @@ async function tick(force){ try{
  const d=await(await fetch('/api/summary'+q)).json();
  if(d.error){document.getElementById('sub').textContent='error: '+d.error;return;}
  const L=d.local, cfg=d.cfg, rp=d.replay, lm=d.local_model||{};
+ if(d.fleet&&!fleetLoaded){fleetCache=d.fleet;fleetLoaded=true;renderFleet();}
  localLabel=lm.label||null;
  document.getElementById('sub').textContent=
   `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
@@ -227,6 +289,10 @@ async function tick(force){ try{
 
  pushHist('power',L.watts_fleet);pushHist('eff',L.eff_eur_1m);
  // sparklines ONLY on: fleet power, local effective
+ let rpct=null;
+ if(d.repaid){const rm=(d.repaid.models||[]).find(m=>m.model===cloudModel);
+  if(rm&&rm.cloud_cached_eur!=null&&d.repaid.capex)rpct=Math.max(0,(rm.cloud_cached_eur-d.repaid.local_cost_eur))/d.repaid.capex*100;}
+ if(rpct!=null)pushHist('repaid',rpct);
  const cards=[
   ['active units',(cfg.n_sparks||1)+' Spark',null,null],
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
@@ -234,7 +300,8 @@ async function tick(force){ try{
   ['fleet power · all units',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
   ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M','eff',PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
-  ['tariff',cfg.eur_per_kwh+' €/kWh',null,null]];
+  ['tariff',cfg.eur_per_kwh+' €/kWh',null,null],
+  ['repaid so far',rpct==null?'\u2014':rpct.toFixed(1)+'%','repaid',PALETTE[2]]];
  document.getElementById('cards').innerHTML=cards.map(c=>{
   const spark=(c[2]&&hist[c[2]]&&hist[c[2]].length>1)?sparkline(c[2],c[3]):'';
   const vc=c[3]?` style="color:${c[3]}"`:'';
@@ -497,6 +564,34 @@ class H(BaseHTTPRequestHandler):
                 self._send(404, b"logo not found", "text/plain")
         elif u.path == "/":
             self._send(200, HTML.encode(), "text/html; charset=utf-8")
+        else:
+            self._send(404, b"not found", "text/plain")
+
+    def do_POST(self) -> None:  # noqa: N802
+        """P47: fleet config + live test. JSON body; passwords never in URLs
+        and never echoed back."""
+        u = urlparse(self.path)
+        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(n)) if n else {}
+        except Exception:
+            return self._send(400, b'{"error":"bad json"}', "application/json")
+        if u.path == "/api/fleet":
+            try:
+                hosts = body.get("hosts") or []
+                save_fleet(hosts)
+                save_n_sparks(len([h for h in hosts if h.get("name")]))
+                self._send(200, json.dumps({"ok": True}).encode(), "application/json")
+            except Exception as e:  # noqa: BLE001
+                self._send(500, json.dumps({"ok": False, "error": str(e)}).encode(),
+                           "application/json")
+        elif u.path == "/api/fleet/test":
+            try:
+                self._send(200, json.dumps(test_fleet_host(body.get("host") or {})).encode(),
+                           "application/json")
+            except Exception as e:  # noqa: BLE001
+                self._send(500, json.dumps({"ok": False, "error": str(e)}).encode(),
+                           "application/json")
         else:
             self._send(404, b"not found", "text/plain")
 

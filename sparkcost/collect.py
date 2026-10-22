@@ -128,6 +128,52 @@ def read_watts_ssh(host: dict) -> float | None:
         return None
 
 
+def save_fleet(hosts: list) -> None:
+    """P47: persist the cluster machines configured in the UI to fleet.yaml
+    (atomic, chmod 600, gitignored). Empty password on an ssh host = keep the
+    stored one for the same name (the UI never echoes stored passwords)."""
+    import os
+    import yaml
+    old = {h.get("name"): h for h in load_fleet()}
+    merged = []
+    for h in hosts:
+        name = str((h or {}).get("name") or "").strip()
+        if not name:
+            continue
+        mode = "ssh" if h.get("mode") == "ssh" else "local"
+        rec = {"name": name, "mode": mode}
+        if mode == "ssh":
+            rec["ip"] = str(h.get("ip") or "").strip()
+            rec["port"] = int(h.get("port") or 22)
+            rec["user"] = str(h.get("user") or "").strip()
+            rec["password"] = str(h.get("password") or "") or \
+                old.get(name, {}).get("password", "")
+        merged.append(rec)
+    FLEET_CFG.parent.mkdir(parents=True, exist_ok=True)
+    tmp = FLEET_CFG.with_suffix(".yaml.tmp")
+    tmp.write_text(yaml.safe_dump({"fleet": merged}, sort_keys=False))
+    os.chmod(tmp, 0o600)
+    tmp.replace(FLEET_CFG)
+
+
+def test_fleet_host(host: dict) -> dict:
+    """P47: live power read with the given config; empty password falls back
+    to the stored one (same name). Returns {ok, watts} or {ok:False, error}."""
+    h = dict(host or {})
+    if not h.get("password"):
+        old = {x.get("name"): x for x in load_fleet()}
+        h["password"] = old.get(h.get("name"), {}).get("password", "")
+    if h.get("mode") != "ssh":
+        w = read_watts()
+        return ({"ok": True, "watts": w} if w is not None
+                else {"ok": False, "error": "nvidia-smi locale non disponibile"})
+    if not (h.get("ip") and h.get("user") and h.get("password")):
+        return {"ok": False, "error": "ip/user/password mancanti"}
+    w = read_watts_ssh(h)
+    return ({"ok": True, "watts": w} if w is not None
+            else {"ok": False, "error": "SSH fallito (credenziali o rete)"})
+
+
 def integrated_watts(window_s: int | None = None, min_span_s: int = 300) -> dict | None:
     """P46 time-weighted FLEET power: per-host trapezoid over the per-host
     `power` table, summed. Legacy fallback: the single-host `samples` table

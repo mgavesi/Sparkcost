@@ -319,3 +319,15 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] VERIFICATO LIVE: spark-01 (local nvidia-smi) 40.3 W + spark-02 (SSH) 32.6 W = card fleet 72.9 W; footer "36.5 W/unit × 2 units"; 0 errori JS
 - Note: host senza dati → spot SSH live; dopo 5 min di campioni il mode passa da latest a integrated; sshpass non necessario (paramiko); se cambiano le password rigenerare data/fleet.yaml
 - Acceptance: potenza per singola macchina leggibile in dashboard + somma corretta ✅
+
+### P47 — Tema dark/light + card 4+4 + ombra sparkline + pannello cluster ✅ (2026-10-22, owner request)
+- [x] Toggle tema ☀️/🌙 accanto al logo: body.light con variabili CSS complete (bg/card/tx/mut/acc/b/warn/thbg/inputbg); scelta persistita in localStorage; override via ?theme=light|dark nell'URL
+- [x] Colori hardcodati migrati a variabili (th header, tr.local, input, button)
+- [x] Card grid: 4 colonne fisse (2 righe da 4), fallback 2/1 colonne <1500/<900px; padding 16-18px; valori 25px, label 12px
+- [x] 8ª card "repaid so far" (griglia 4+4 uniforme): % ripagato del modello selezionato dal ledger persistente, con sparkline storica
+- [x] Sparkline: ombra sfocata sotto la traccia (feGaussianBlur stdDeviation 2.2 sull'area, stile sparkDash) + gradiente
+- [x] Pannello "⚙ Cluster machines (per-host power)" nel side panel (details): riga per macchina con name/mode local|ssh/ip/port/user/password; bottone Test (lettura live) e ✕; Save → POST /api/fleet (password MAI in URL, mai riverberate; vuota = mantiene la stored; sincronizza n_sparks)
+- [x] Backend: collect.save_fleet() atomico chmod 600 + test_fleet_host() (fallback password stored); localcost.save_n_sparks(); report() espone fleet MASCHERATO (has_password bool, mai la password)
+- [x] VERIFICATO LIVE: fleet/test spark-02 → {"ok":true,"watts":10.69} (idle notturna); save roundtrip preserva password; n_sparks=2 synced; footer integrated per-host (spark-01 56.1 W + spark-02 48.7 W = 104.9 W); entrambi i temi screenshotati; 0 errori JS
+- Bugfix during dev: emoji JS come escape \uD83C\uDF19 diventava surrogate Python invalido all'encode UTF-8 dell'HTML → emoji reali nel sorgente
+- Acceptance: tema commutabile, card uniformi su 2 righe, ombra sparkline, configurazione cluster completa con test live ✅

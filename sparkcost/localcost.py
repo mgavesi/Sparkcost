@@ -205,6 +205,26 @@ def apply_price_overrides(rows: list[dict], overrides: dict) -> int:
     return n
 
 
+def _fleet_public() -> list:
+    """P47: fleet hosts masked (no password, only has_password) for the UI."""
+    from .collect import load_fleet
+    return [{"name": h["name"], "mode": h.get("mode", "ssh"), "ip": h.get("ip", ""),
+             "port": h.get("port", 22), "user": h.get("user", ""),
+             "has_password": bool(h.get("password"))} for h in load_fleet()]
+
+
+def save_n_sparks(n: int) -> None:
+    """P47: sync n_sparks with the number of machines configured in the fleet
+    panel (preserves comments, same pattern as save_users)."""
+    n = max(1, int(n))
+    text = CONFIG.read_text()
+    if re.search(r"^n_sparks:", text, re.M):
+        text = re.sub(r"^n_sparks:.*$", f"n_sparks: {n}", text, flags=re.M)
+    else:
+        text = text.rstrip() + f"\nn_sparks: {n}\n"
+    CONFIG.write_text(text)
+
+
 def save_price(model: str, field: str, eur_1m: float, usd_eur: float) -> None:
     """Saves an edited price (UI input in EUR/1M, stored in USD/1M)."""
     key = {"in": "in_usd", "out": "out_usd", "cache": "cache_usd"}[field]
@@ -706,7 +726,7 @@ def report(do_measure: bool = False, refresh: bool = False,
         lc["basis"] = "assumed regime (tok/s and hours from config)"
     return {"cfg": cfg, "local": lc, "measured": measured, "cloud": table,
             "server": srv or {}, "counters": counters, "replay": replay,
-            "rates": rates, "ledger": led, "repaid": rep,
+            "rates": rates, "ledger": led, "repaid": rep, "fleet": _fleet_public(),
             "energy_source": energy_source,
             "breakeven": bk, "local_model": local_model,
             "capex_eur": capex_total(cfg),

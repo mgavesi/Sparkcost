@@ -1,5 +1,5 @@
 # sparkcost — configuration (edit freely)
-n_sparks: 2              # number of active Spark units in the fleet (multiplies energy + capex)
+n_sparks: 2
 eur_per_kwh: 0.12
 usd_eur: 0.93
 hardware_total_eur: 8800.0
