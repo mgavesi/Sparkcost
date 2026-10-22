@@ -299,3 +299,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Verificato DOM stub: 1 riga GLM cloud (€24.71 vs €36.02, 0.0% repaid); JS ok
 - Nota: la tabella 2 (break-even) era già filtrata correttamente; il colpevole era solo il ledger
 - Criterio: tutte e 3 le tabelle ora mostrano 1 modello alla volta (quello selezionato) ✅
+
+### P39 — Fleet power: misura corretta + layout side panel ✅ (2026-10-22, richiesta Marco)
+- [x] BUG MISURA: integrated_watts() medava TUTTO lo storico del DB (6,8gg, affogato nell'idle notturno) → 15,8 W/unit; ora finestra ULTIMI 30 MIN (min(uptime,1800s)) → 57 W/unit, coerente con sparkDash (GPU 56-64 W) e nvidia-smi live (59,24 W) — cross-check 2026-10-22
+- [x] Chiarezza UI: card "fleet power · all units" + footer "power 114.0 W fleet = 57.0 W/unit × 2 units, time-weighted over 30 min" (il fleet ERA già moltiplicato, il valore di misura era sbagliato)
+- [x] LAYOUT: tutta la barra controlli (9 input/select + 2 bottoni) spostata in SIDE PANEL sinistro sticky (280px, collassa in alto <900px); .main flex-1 con cards+3 tabelle; footer fisso invariato
+- [x] DOM stub: T1 2 righe, T2/T3 1 riga ciascuna, footer con W/unit, label card ok; JS node --check ok
+- Nota: il sampler (sparkcost.collect --loop 60) scrive i campioni nel DB — va tenuto vivo per la finestra 30min; fallback spot se campioni insufficienti
+- Criterio: misura coerente con sparkDash, grafica con pannello a sinistra ✅

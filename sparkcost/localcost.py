@@ -639,10 +639,11 @@ def report(do_measure: bool = False, refresh: bool = False,
             measured = True
         energy_source = {"mode": "measure-window"}
     else:
-        # P40: time-weighted power (trapezoid) from the sampler's samples, if
-        # the DB has enough within the server window; otherwise a spot reading
-        # as before. The integrated energy is exact, not random.
-        integ = (integrated_watts(window_s=int(srv["uptime_s"]))
+        # P41: time-weighted power (trapezoid) over the LAST 30 MIN (bounded by
+        # uptime if shorter) — il rate operativo ATTUALE, non la media di tutto
+        # lo storico affogata nell'idle (15.8 W/unit vs 58 W live, cross-check
+        # sparkDash/nvidia-smi 2026-10-22). Fallback: lettura spot nvidia-smi.
+        integ = (integrated_watts(window_s=min(int(srv["uptime_s"]), 1800))
                  if srv and srv.get("uptime_s") else None)
         if integ:
             watts = integ["watts_avg"]

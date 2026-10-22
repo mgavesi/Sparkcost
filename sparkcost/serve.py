@@ -47,14 +47,18 @@ tr.mine td{outline:1px solid var(--acc)}
 tr.cheapest td{color:var(--warn)}
 td.num{text-align:right}th.num{text-align:right}
 td .basis{color:var(--mut);font-size:10px}
-.bar{background:var(--card);border:1px solid var(--b);border-radius:10px;padding:12px 14px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.bar .lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:0 6px 0 0}
-.bar select,.bar input{background:#000;color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px}
-.bar input{width:110px;text-align:right}
-.bar button{background:#000;color:var(--acc);border:1px solid var(--acc);border-radius:8px;
-padding:5px 14px;font:inherit;font-size:12px;cursor:pointer}
-.bar button:disabled{color:var(--mut);border-color:var(--b);cursor:wait}
-.bar .rt{padding:4px 10px;font-size:11px;color:var(--mut);border-color:var(--b)}
+.wrap{display:flex;gap:20px;align-items:flex-start}
+.side{width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px;position:sticky;top:16px}
+.side .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
+.field{display:flex;align-items:center;gap:6px;margin-top:2px}
+.field input,.side select{flex:1;min-width:0;background:#000;color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
+.field input:focus,.side select:focus{border-color:var(--acc);outline:none}
+.saved{color:var(--acc);font-size:11px;white-space:nowrap}
+.side button{display:block;width:100%;background:#000;color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:6px 0;font:inherit;font-size:12px;cursor:pointer;margin-top:10px}
+.side button:disabled{color:var(--mut);border-color:var(--b);cursor:wait}
+.side .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
+.main{flex:1;min-width:0}
+@media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static}}
 tr.hd-red th{background:#4a1520;color:#ffb08a}
 .bar .rt.on{color:var(--acc);border-color:var(--acc)}
 .bar .sep{flex:1}
@@ -64,44 +68,37 @@ td input.pr:hover{border-color:var(--b)}td input.pr:focus{border-color:var(--acc
 td input.pr.edited{border-color:var(--warn);color:var(--warn)}
 td input.pr:disabled{color:var(--mut);border-color:transparent}
 .badge{color:var(--warn);font-size:10px;margin-left:4px}
-#locwarn,#capexsaved,#tariffsaved,#hourssaved{color:var(--warn);font-size:11px;margin-left:6px}
-#capexsaved,#tariffsaved,#hourssaved,#amortsaved,#userssaved{color:var(--acc)}
+#locwarn{color:var(--warn);font-size:11px}
 .footer{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--b);
 padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
+<div class="wrap">
+<aside class="side">
+ <span class="lbl">Investment &euro;</span>
+ <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
+ <span class="lbl">Energy &euro;/kWh</span>
+ <div class="field"><input id="tariff" type="number" step="0.01" min="0" placeholder="0.28"><span class="saved" id="tariffsaved"></span></div>
+ <span class="lbl">Hours/day</span>
+ <div class="field"><input id="hours" type="number" step="0.5" min="0" max="24" placeholder="8"><span class="saved" id="hourssaved"></span></div>
+ <span class="lbl">Amort years</span>
+ <div class="field"><input id="amort" type="number" step="1" min="1" max="15" placeholder="5"><span class="saved" id="amortsaved"></span></div>
+ <label class="chip" id="deprchip" title="uncheck if the Spark was bought privately: capex not depreciated, local cost = energy only">
+  <input id="depr" type="checkbox" checked> Depreciate</label>
+ <span class="lbl">Cluster users</span>
+ <div class="field"><input id="users" type="number" step="1" min="1" max="50" placeholder="2"><span class="saved" id="userssaved"></span></div>
+ <span class="lbl">Cloud model</span>
+ <select id="cloudsel"></select>
+ <span class="lbl">Local model</span>
+ <select id="locsel"><option value="">Auto-detect&hellip;</option></select>
+ <span id="locwarn"></span>
+ <button id="resetBtn" title="Restore online price list">&#8634; Reset prices</button>
+ <button id="refreshBtn">&#8635; Refresh prices</button>
+</aside>
+<div class="main">
 <div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
 <div class="cards" id="cards"></div>
 
-<div class="bar">
- <span class="lbl">Investment &euro;</span>
- <input id="capex" type="number" step="0.01" min="0" placeholder="8856.94">
- <span id="capexsaved"></span>
- <span class="lbl">&nbsp;&nbsp;Energy &euro;/kWh</span>
- <input id="tariff" type="number" step="0.01" min="0" placeholder="0.28">
- <span id="tariffsaved"></span>
- <span class="lbl">&nbsp;&nbsp;Hours/day</span>
- <input id="hours" type="number" step="0.5" min="0" max="24" placeholder="8">
- <span id="hourssaved"></span>
- <span class="lbl">&nbsp;&nbsp;Amort years</span>
- <input id="amort" type="number" step="1" min="1" max="15" placeholder="5">
- <span id="amortsaved"></span>
- <label class="chip" id="deprchip" title="uncheck if the Spark was bought privately: capex not depreciated, local cost = energy only">
-  <input id="depr" type="checkbox" checked> Depreciate</label>
- <span class="sep"></span>
- <span class="lbl">&nbsp;&nbsp;Cluster users</span>
- <input id="users" type="number" step="1" min="1" max="50" placeholder="2">
- <span id="userssaved"></span>
- <span class="sep"></span>
- <span class="lbl">Cloud model</span>
- <select id="cloudsel"></select>
- <span class="sep"></span>
- <span class="lbl">Local model</span>
- <select id="locsel"><option value="">Auto-detect…</option></select>
- <span id="locwarn"></span>
- <span class="sep"></span>
- <button id="resetBtn" title="Restore online price list">&#8634; Reset prices</button>
- <button id="refreshBtn">&#8635; Refresh prices</button>
-</div>
+
 
 <h2>Monthly cost &mdash; local 24/7 vs cloud at your current token rate</h2>
 <div class="sub" id="replaysub"></div>
@@ -122,6 +119,8 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 <table><thead><tr><th>Model</th><th class="num">cloud cached (total)</th><th class="num">local cost (total)</th><th class="num">savings</th><th class="num">repaid</th></tr></thead>
 <tbody id="rp2"></tbody></table>
 <div class="sub">cumulative totals from data/token_ledger.json &mdash; persistent across server restarts and reboots (counters reset is detected and folded in) &middot; local cost at the measured rate applied to the whole history &middot; repaid = share of the investment already covered by real usage, up to date</div>
+</div>
+</div>
 <div class="footer" id="sub">loading...</div>
 <script>
 const fmt=n=>n==null||isNaN(n)?'':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'k':''+Math.round(n);
@@ -207,7 +206,7 @@ async function tick(force){ try{
   `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
   (d.snapshot_age_h!=null?` · price list ${d.snapshot_age_h<1?Math.round(d.snapshot_age_h*60)+' min':d.snapshot_age_h.toFixed(0)+' h'} old`:'')+
   (()=>{const es=d.energy_source||{};
-   if(es.mode==='integrated')return ` · power ${(+L.watts_fleet).toFixed(1)} W fleet time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
+   if(es.mode==='integrated')return ` · power ${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
    if(es.mode==='spot')return ' · power spot reading (sampler warming up)';
    return '';})();
  const ci=document.getElementById('capex');
@@ -230,7 +229,7 @@ async function tick(force){ try{
   ['active units',(cfg.n_sparks||1)+' Spark',null,null],
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
   ['generated tokens (total)',fmt(+(d.ledger?d.ledger.gen_total:d.counters.gen_total)||0),null,null],
-  ['fleet power',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
+  ['fleet power · all units',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
   ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M','eff',PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
   ['tariff',cfg.eur_per_kwh+' €/kWh',null,null]];
