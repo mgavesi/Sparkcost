@@ -21,6 +21,7 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 DB = DATA / "sparkcost.sqlite"
+FLEET_CFG = DATA / "fleet.yaml"  # P46: per-host power config (gitignored, 0600)
 
 
 def detect_server() -> dict | None:
@@ -96,25 +97,100 @@ def read_watts() -> float | None:
         return None
 
 
+def load_fleet() -> list[dict]:
+    """P46: fleet hosts from data/fleet.yaml. [] if the file is absent/invalid
+    (single-host legacy behaviour)."""
+    try:
+        import yaml
+        cfg = yaml.safe_load(FLEET_CFG.read_text()) if FLEET_CFG.exists() else {}
+        return [h for h in (cfg.get("fleet") or []) if h.get("name")]
+    except Exception:
+        return []
+
+
+def read_watts_ssh(host: dict) -> float | None:
+    """P46: nvidia-smi power.draw via SSH (paramiko password auth).
+    Returns the TOTAL W of the host's GPUs, None on any failure."""
+    try:
+        import paramiko
+        c = paramiko.SSHClient()
+        c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        c.connect(host["ip"], port=int(host.get("port", 22)), username=host["user"],
+                  password=host["password"], timeout=8,
+                  look_for_keys=False, allow_agent=False)
+        _, out, _ = c.exec_command(
+            "nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits", timeout=12)
+        vals = [float(x) for x in out.read().decode().split()
+                if x.replace('.', '', 1).isdigit()]
+        c.close()
+        return sum(vals) if vals else None
+    except Exception:
+        return None
+
+
 def integrated_watts(window_s: int | None = None, min_span_s: int = 300) -> dict | None:
-    """Time-weighted average (trapezoid) of the power samples in the DB: energy
-    vera = ∫P dt, non una lettura casuale. window_s limita agli ultimi N
-    secondi (None = tutto lo storico). Ritorna None se campioni insufficienti
-    (<2 o span < min_span_s): il chiamante fa fallback alla lettura puntuale.
-    Note: watts are per unit (GPU 0 of this host); the fleet multiplies."""
+    """P46 time-weighted FLEET power: per-host trapezoid over the per-host
+    `power` table, summed. Legacy fallback: the single-host `samples` table
+    (per-unit semantics, the fleet multiplies). Per-host mode returns
+    watts_avg = fleet SUM and watts_unit = sum/n (cost math is linear, so
+    passing watts_unit to local_cost keeps every term identical).
+    Hosts with < min_span_s of samples use their latest stored value ('latest');
+    configured hosts with no rows get a live spot SSH read ('spot')."""
     if not DB.exists() or DB.stat().st_size == 0:
         return None
+    fleet = load_fleet()
     con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    since = int(time.time() - window_s) if window_s else 0
     try:
+        if fleet:
+            names = [h["name"] for h in fleet]
+            qmarks = ",".join("?" * len(names))
+            try:
+                hosts = [r[0] for r in con.execute(
+                    f"SELECT DISTINCT host FROM power WHERE watts IS NOT NULL"
+                    f" AND host IN ({qmarks})" + (" AND ts>=?" if since else ""),
+                    names + ([since] if since else []))]
+            except sqlite3.OperationalError:
+                hosts = []
+            per_host, from_ts, to_ts = {}, None, None
+            for hn in names:
+                rows = con.execute(
+                    "SELECT ts,watts FROM power WHERE host=? AND watts IS NOT NULL"
+                    + (" AND ts>=?" if since else "") + " ORDER BY ts",
+                    (hn, since) if since else (hn,)).fetchall()
+                if rows:
+                    from_ts = rows[0][0] if from_ts is None else min(from_ts, rows[0][0])
+                    to_ts = rows[-1][0] if to_ts is None else max(to_ts, rows[-1][0])
+                if len(rows) >= 2 and (rows[-1][0] - rows[0][0]) >= min_span_s:
+                    span = rows[-1][0] - rows[0][0]
+                    energy_j = sum((rows[i][1] + rows[i + 1][1]) / 2
+                                   * (rows[i + 1][0] - rows[i][0])
+                                   for i in range(len(rows) - 1))
+                    per_host[hn] = {"watts": energy_j / span, "mode": "integrated",
+                                    "samples": len(rows), "span_s": span}
+                elif rows:
+                    per_host[hn] = {"watts": rows[-1][1], "mode": "latest",
+                                    "samples": len(rows), "span_s": rows[-1][0] - rows[0][0]}
+                else:
+                    h = next(x for x in fleet if x["name"] == hn)
+                    w = read_watts() if h.get("mode") == "local" else read_watts_ssh(h)
+                    per_host[hn] = {"watts": w, "mode": "spot"} if w is not None else None
+            if any(per_host.values()):
+                valid = [v["watts"] for v in per_host.values() if v]
+                return {"watts_avg": sum(valid),
+                        "watts_unit": sum(valid) / max(len(valid), 1),
+                        "samples": sum(v["samples"] for v in per_host.values() if v),
+                        "span_s": max(v["span_s"] for v in per_host.values() if v),
+                        "from_ts": from_ts, "to_ts": to_ts,
+                        "per_host": per_host}
+            # nessun dato per-host: continua sul legacy
         if window_s:
             rows = con.execute(
                 "SELECT ts,watts FROM samples WHERE watts IS NOT NULL AND ts>=? ORDER BY ts",
-                (int(time.time() - window_s),)).fetchall()
+                (since,)).fetchall()
         else:
             rows = con.execute(
                 "SELECT ts,watts FROM samples WHERE watts IS NOT NULL ORDER BY ts").fetchall()
-    except sqlite3.OperationalError:
-        return None  # tabella assente / DB non ancora inizializzato
     finally:
         con.close()
     if len(rows) < 2:
@@ -126,6 +202,7 @@ def integrated_watts(window_s: int | None = None, min_span_s: int = 300) -> dict
                    for i in range(len(rows) - 1))
     return {"watts_avg": energy_j / span, "samples": len(rows), "span_s": span,
             "from_ts": rows[0][0], "to_ts": rows[-1][0]}
+
 
 
 def measure(window_s: int = 10) -> dict:
@@ -157,6 +234,8 @@ def _db() -> sqlite3.Connection:
     con.execute("""CREATE TABLE IF NOT EXISTS samples(
         ts INTEGER PRIMARY KEY, server TEXT, prompt_total INTEGER,
         gen_total INTEGER, watts REAL)""")
+    con.execute("""CREATE TABLE IF NOT EXISTS power(
+        ts INTEGER, host TEXT, watts REAL, PRIMARY KEY(ts, host))""")
     return con
 
 
@@ -170,7 +249,14 @@ def sample_once() -> dict:
             c = read_counters(srv["port"])
         except SystemExit:
             c = {}  # server presente ma /metrics non risponde: watt bastano
-    return {"server": srv, "counters": c, "watts": read_watts()}
+    m = {"server": srv, "counters": c, "watts": read_watts()}
+    fleet = load_fleet()
+    if fleet:
+        per = {}
+        for h in fleet:
+            per[h["name"]] = m["watts"] if h.get("mode") == "local" else read_watts_ssh(h)
+        m["fleet_watts"] = per
+    return m
 
 
 def store_sample(m: dict) -> None:
@@ -181,6 +267,11 @@ def store_sample(m: dict) -> None:
         "INSERT OR REPLACE INTO samples VALUES(?,?,?,?,?)",
         (int(time.time()), (m.get("server") or {}).get("name"),
          int(pt) if pt else None, int(gt) if gt else None, m.get("watts")))
+    if m.get("fleet_watts"):
+        for host, w in m["fleet_watts"].items():
+            if w is not None:
+                con.execute("INSERT OR REPLACE INTO power VALUES(?,?,?)",
+                            (int(time.time()), host, float(w)))
     con.commit()
     con.close()
 

@@ -2,3 +2,4 @@ data/*.json
 data/*.sqlite*
 __pycache__/
 *.pyc
+data/fleet.yaml

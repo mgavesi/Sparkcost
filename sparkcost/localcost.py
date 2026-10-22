@@ -646,10 +646,14 @@ def report(do_measure: bool = False, refresh: bool = False,
         integ = (integrated_watts(window_s=min(int(srv["uptime_s"]), 1800))
                  if srv and srv.get("uptime_s") else None)
         if integ:
-            watts = integ["watts_avg"]
+            # P46: per-host mode -> watts_unit = SOMMA/n_host rispondenti; i costi
+            # sono lineari quindi local_cost(watts=unit)*n ricompone la somma esatta.
+            watts = integ.get("watts_unit", integ["watts_avg"])
             energy_source = {"mode": "integrated", "samples": integ["samples"],
                              "span_s": integ["span_s"], "from_ts": integ["from_ts"],
                              "to_ts": integ["to_ts"]}
+            if integ.get("per_host"):
+                energy_source["per_host"] = integ["per_host"]
         else:
             watts = read_watts() or watts
             energy_source = {"mode": "spot"}

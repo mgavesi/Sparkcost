@@ -306,3 +306,16 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] DOM stub: T1 2 rows, T2/T3 1 row each, footer with W/unit, card labels ok; JS node --check ok
 - Note: the sampler (sparkcost.collect --loop 60) writes samples to the DB — keep it alive for the 30-min window; spot fallback if there are not enough samples
 - Acceptance: measurement consistent with sparkDash, side-panel layout ✅
+
+### P45 — Logo top-left nel frame ✅ (2026-10-22, owner request)
+- [x] Logo sparkcost spostato dal .main (era centrato sopra le card) al TOP-LEFT del side panel, sopra "Investment €" — altezza 110px → 44px (fit 280px panel)
+- Acceptance: logo primo elemento del frame, layout side panel invariato ✅
+
+### P46 — Fleet power multi-macchina (stile sparkDash) ✅ (2026-10-22, owner request)
+- [x] data/fleet.yaml (gitignored, chmod 600): lista host con mode local|ssh, ip/port/user/password — credenziali prese dal caveau cifrato sparkDash (AES-256-GCM v2, formato node iv+tag+ct, decrypt ok; NON mostrate in chat)
+- [x] collect.py: tabella power(ts,host,watts) + read_watts_ssh() via paramiko (nvidia-smi remoto, somma GPU) + sample_once() legge TUTTI gli host ogni ciclo + integrated_watts() P46: trapezoide per-host sommato, fallback legacy samples per unità
+- [x] localcost.py: watts_unit = SOMMA/n_host_rispondenti (costi lineari → local_cost(watts)*n ricompone esatto); energy_source.per_host esposto all'API
+- [x] serve.py footer: "· dgx-spark-01 40.3 W latest · dgx-spark-02 32.6 W latest" (mode per host: integrated/latest/spot/n-d)
+- [x] VERIFICATO LIVE: spark-01 (local nvidia-smi) 40.3 W + spark-02 (SSH) 32.6 W = card fleet 72.9 W; footer "36.5 W/unit × 2 units"; 0 errori JS
+- Note: host senza dati → spot SSH live; dopo 5 min di campioni il mode passa da latest a integrated; sshpass non necessario (paramiko); se cambiano le password rigenerare data/fleet.yaml
+- Acceptance: potenza per singola macchina leggibile in dashboard + somma corretta ✅

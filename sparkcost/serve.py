@@ -32,7 +32,7 @@ HTML = """<!doctype html><html><head><meta charset="utf-8">
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
 font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px 24px 56px}
 h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
-.hdr{margin-bottom:14px}.hdr img{height:110px;max-width:420px;object-fit:contain;display:block}
+.hdr{margin-bottom:12px}.hdr img{height:44px;max-width:100%;object-fit:contain;display:block}
 .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
 .card{background:var(--card);border:1px solid var(--b);border-radius:10px;padding:14px}
@@ -74,6 +74,7 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
 <div class="wrap">
 <aside class="side">
+ <div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
  <span class="lbl">Investment &euro;</span>
  <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
  <span class="lbl">Energy &euro;/kWh</span>
@@ -95,7 +96,6 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
  <button id="refreshBtn">&#8635; Refresh prices</button>
 </aside>
 <div class="main">
-<div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
 <div class="cards" id="cards"></div>
 
 
@@ -206,7 +206,9 @@ async function tick(force){ try{
   `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
   (d.snapshot_age_h!=null?` · price list ${d.snapshot_age_h<1?Math.round(d.snapshot_age_h*60)+' min':d.snapshot_age_h.toFixed(0)+' h'} old`:'')+
   (()=>{const es=d.energy_source||{};
-   if(es.mode==='integrated')return ` · power ${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
+   if(es.mode==='integrated'){let s=` · power ${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
+    if(es.per_host)s+=' · '+Object.entries(es.per_host).map(([k,v])=>v?`${k} ${(+v.watts).toFixed(1)} W ${v.mode}`:`${k} n/d`).join(' · ');
+    return s;}
    if(es.mode==='spot')return ' · power spot reading (sampler warming up)';
    return '';})();
  const ci=document.getElementById('capex');
