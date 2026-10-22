@@ -291,3 +291,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] "AA <score>" badge next to the model name (first table) and in dropdown options: Artificial Analysis Intelligence Index, benchlm.ai snapshot 2026-10-20 (v4.3.x); AA_SCORES dict in models.py, attached in extract(); models missing from the top-100 (Cyber, Mythos, Sonnet 4.5) get no badge
 - [x] Roundtrip verified: 3 users -> GLM 302.49 (x3), GPT-5.5 sub 558 (186x3); 2 users -> 201.66; bk/users exposed in the API
 - Acceptance: editable and propagated users, A-Z dropdown, visible AA badge ✅
+
+### P38 — Tabella "Repaid so far" solo sul modello selezionato ✅ (2026-10-22, richiesta Marco)
+- [x] La tabella 3 mostrava i primi 8 modelli del ledger (r.models.slice(0,8)) indipendentemente dalla selezione
+- [x] Ora: SOLO il modello selezionato nel dropdown (filtro model===cloudModel), titolo dinamico "Repaid so far — <modello> vs local"
+- [x] Se il modello non ha storico nel ledger: 1 riga con trattini (—) invece di scomparire
+- [x] Verificato DOM stub: 1 riga GLM cloud (€24.71 vs €36.02, 0.0% repaid); JS ok
+- Nota: la tabella 2 (break-even) era già filtrata correttamente; il colpevole era solo il ledger
+- Criterio: tutte e 3 le tabelle ora mostrano 1 modello alla volta (quello selezionato) ✅

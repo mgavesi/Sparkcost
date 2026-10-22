@@ -117,7 +117,7 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 <tbody id="bk"></tbody></table>
 <div class="sub">payback = months of cloud savings needed to repay the investment, at the current usage rate projected monthly &middot; scenarios: no-cache, cache 90% (incl. cache-write), batch API (where the price list exposes batch prices) &middot; in &euro;/1M = effective input price used by the calculation (read-only here) &middot; out &euro;/1M editable (same override as the first table) &middot; open-weight scenarios per-token, closed-weight top-tier subscription</div>
 
-<h2>Repaid so far &mdash; investment covered by real usage</h2>
+<h2>Repaid so far &mdash; <span id="rp2model" style="color:var(--acc)"></span> vs local (investment covered by real usage)</h2>
 <div class="sub" id="rpsub"></div>
 <table><thead><tr><th>Model</th><th class="num">cloud cached (total)</th><th class="num">local cost (total)</th><th class="num">savings</th><th class="num">repaid</th></tr></thead>
 <tbody id="rp2"></tbody></table>
@@ -300,8 +300,10 @@ async function tick(force){ try{
    const r=d.repaid;
    document.getElementById('rpsub').textContent=
     `cumulative ${(r.prompt_total/1e9).toFixed(2)}B prompt + ${(r.gen_total/1e6).toFixed(0)}M gen since ${new Date((r.first_ts||0)*1000).toLocaleDateString()} · local cost ${eur(r.local_cost_eur)} at the measured rate · investment ${eur(r.capex)}`;
-   rp2.innerHTML=r.models.slice(0,8).map(m=>
-    `<tr><td>${m.model}</td><td class="num">${eur(m.cloud_cached_eur)}</td><td class="num">${eur(r.local_cost_eur)}</td><td class="num">${eur(m.savings_cached_eur)}</td><td class="num">${m.repaid_pct.toFixed(1)}%</td></tr>`
+   document.getElementById('rp2model').textContent=cloudModel;
+   const selRows=r.models.filter(m=>m.model===cloudModel);
+   rp2.innerHTML=(selRows.length?selRows:[{model:cloudModel,cloud_cached_eur:null,savings_cached_eur:null,repaid_pct:0}]).map(m=>
+    `<tr><td>${m.model}</td><td class="num">${m.cloud_cached_eur==null?'—':eur(m.cloud_cached_eur)}</td><td class="num">${eur(r.local_cost_eur)}</td><td class="num">${m.savings_cached_eur==null?'—':eur(m.savings_cached_eur)}</td><td class="num">${m.repaid_pct.toFixed(1)}%</td></tr>`
    ).join('');
   } else rp2.innerHTML='<tr><td colspan="5">ledger warming up (fills on the next refresh)</td></tr>';
  }
