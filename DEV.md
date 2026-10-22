@@ -338,3 +338,14 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Endpoint POST /api/cfg: whitelist chiavi (_CFG_PARAMS), tipizzazione int/float, range-check (_CFG_RANGE), scrittura line-preserving in config.yaml; errori espliciti ("unknown keys: …", "allowed 0-10")
 - [x] VERIFICATO LIVE: POST valido {cache_hit_rate:0.9} → ok saved; {hackme:1} → 400 unknown keys; {eur_per_kwh:99} → 400 allowed 0-10; campi popolati dal summary (n_sparks 2, idle 17, usd 0.93, tok/s 40, ratio 3, cache 0.9, always_on true); 0 errori JS
 - Acceptance: tutti i parametri di input editabili dal pannello di configurazione ✅
+
+### P49 — Struttura a 3 menu: Dash / Config / Statistics ✅ (2026-10-22 23:08, owner request)
+- [x] Side panel ridotto a logo + tema + nav a 3 viste (persistite in localStorage, override ?view=dash|config|stats)
+- [x] Dash: card 4+4 + le 3 tabelle di comparazione (com'era)
+- [x] Config: tutti i parametri P48 spostati in griglia 3 colonne (Investment & Fleet · Energy & Usage · Models) + Cluster machines (P47) full-width
+- [x] Statistics (nuovo): 4 card (fleet mean W, fleet peak W, peak single host, energy kWh) + finestra all/24h/7d + tabella eventi per mode
+- [x] Backend: tabella power + colonna running (ALTER idempotente; flag fleet-wide dal server monitorato su questa macchina); stats.py (media trapezoidale implicita sui fleet-sum per ts, picco, split inference/idle/unknown, energia a cadenza mediana); GET /api/stats?window=
+- [x] Semantica: inference = requests_running>0 (host-scoped, server su questa macchina); idle = running==0; unknown = flag assente (campioni pre-P49, decadranno); server irraggiungibile = escluso dallo split, resta in mean/peak
+- [x] VERIFICATO LIVE: 3 viste HTTP 200; stats: fleet mean 100.7 W, peak 122.9 W, peak host 65.8 W, inference 66 samples mean 54.1 W vs idle 8 samples mean 11.7 W, unknown 906 (pre-flag); 0 errori JS
+- Bugfix: come P47, emoji 💤 come escape \ud83d\udca4 nel JS → surrogate Python → UnicodeEncodeError su HTML.encode; risolto con emoji reali
+- Acceptance: 3 menu funzionanti, statistics con media/picco/eventi inference-idle ✅

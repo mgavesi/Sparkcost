@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_cfg_params, save_price, clear_price
 from .collect import save_fleet, test_fleet_host
+from .stats import fleet_stats
 
 PORT = 8900
 
@@ -74,6 +75,25 @@ td .basis{color:var(--mut);font-size:10px}
 #fleetMsg{font-size:10px;color:var(--acc)}
 .fres{font-size:10px;color:var(--acc);grid-column:1/-1;min-height:12px}
 .side .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
+.menu{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.navbtn{display:block;width:100%;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:10px 12px;font:inherit;font-size:13px;cursor:pointer;text-align:left;margin:0}
+.navbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
+.view[hidden]{display:none}
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:0 28px;align-items:start}
+@media(max-width:1200px){.cgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.cgrid{grid-template-columns:1fr}}
+.cgrid .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
+.cgrid .field input,.cgrid select{flex:1;min-width:0;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
+.cgrid .field input:focus,.cgrid select:focus{border-color:var(--acc);outline:none}
+.cgrid .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
+.cgrid .sech{display:block;color:var(--acc);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin:16px 0 2px;border-bottom:1px solid var(--b);padding-bottom:3px;font-weight:700;grid-column:1/-1}
+.cgrid button{display:block;width:100%;background:var(--inputbg);color:var(--acc);border:1px solid var(--acc);border-radius:8px;padding:6px 0;font:inherit;font-size:12px;cursor:pointer;margin-top:10px}
+.cgrid button:disabled{color:var(--mut);border-color:var(--b);cursor:wait}
+.cgrid .fleetbox{grid-column:1/-1}
+.winrow{display:flex;gap:6px;align-items:center;margin-bottom:14px}
+.winrow .lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.winbtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer;margin:0}
+.winbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
 .main{flex:1;min-width:0}
 @media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static}}
 tr.hd-red th{background:#4a1520;color:#ffb08a}
@@ -92,6 +112,43 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 <div class="wrap">
 <aside class="side">
  <div class="hdr"><img src="/logo.jpg" alt="sparkcost"><button id="themeBtn" type="button" title="dark / light">&#9728;&#65039;</button></div>
+ <nav class="menu">
+  <button class="navbtn active" data-view="dash" type="button">&#128202; Dash</button>
+  <button class="navbtn" data-view="config" type="button">&#9881; Config</button>
+  <button class="navbtn" data-view="stats" type="button">&#9889; Statistics</button>
+ </nav>
+</aside>
+<div class="main">
+<div id="view-dash" class="view">
+<div class="cards" id="cards"></div>
+
+
+
+<h2>Monthly cost &mdash; local 24/7 vs cloud at your current token rate</h2>
+<div class="sub" id="replaysub"></div>
+<table><thead><tr class="hd-red"><th>Model</th><th class="num">in &euro;/1M</th><th class="num">out &euro;/1M</th>
+<th class="num">month cost</th><th class="num">batch API</th><th>basis</th></tr></thead>
+<tbody id="replay"></tbody></table>
+<div class="sub">edit in/out prices to adapt them (amber border = edited, ✎ badge) &middot; AA = Artificial Analysis Intelligence Index (2026-10-20) &middot; open-weight: token cost projected monthly at your current hourly rate x Hours/day, x Cluster users (cache 90% incl. cache-write on misses; batch API = batch price list for non-interactive work) &middot; &#11014;Nx &gt;272k = long-context surcharge on input above the threshold &middot; closed-weight: fixed top-tier subscription x Cluster users &middot; local: fleet fixed cost, always on (shared between users)</div>
+
+<h2>Investment break-even &mdash; <span id="bkmodel" style="color:var(--acc)"></span> vs local</h2>
+<div class="sub" id="bksub"></div>
+<table><thead><tr><th>Model</th><th class="num">in &euro;/1M</th><th class="num">out &euro;/1M</th><th>scenario</th><th class="num">cloud/month</th>
+<th class="num">savings/month</th><th class="num">payback</th></tr></thead>
+<tbody id="bk"></tbody></table>
+<div class="sub">payback = months of cloud savings needed to repay the investment, at the current usage rate projected monthly &middot; scenarios: no-cache, cache 90% (incl. cache-write), batch API (where the price list exposes batch prices) &middot; in &euro;/1M = effective input price used by the calculation (read-only here) &middot; out &euro;/1M editable (same override as the first table) &middot; open-weight scenarios per-token, closed-weight top-tier subscription</div>
+
+<h2>Repaid so far &mdash; <span id="rp2model" style="color:var(--acc)"></span> vs local (investment covered by real usage)</h2>
+<div class="sub" id="rpsub"></div>
+<table><thead><tr><th>Model</th><th class="num">cloud cached (total)</th><th class="num">local cost (total)</th><th class="num">savings</th><th class="num">repaid</th></tr></thead>
+<tbody id="rp2"></tbody></table>
+<div class="sub">cumulative totals from data/token_ledger.json &mdash; persistent across server restarts and reboots (counters reset is detected and folded in) &middot; local cost at the measured rate applied to the whole history &middot; repaid = share of the investment already covered by real usage, up to date</div>
+</div>
+ <div id="view-config" class="view" hidden>
+  <h2>Configuration &mdash; all input parameters</h2>
+  <div class="sub">changes save on edit (saved &check; badge) &middot; passwords are stored server-side (0600) and never echoed</div>
+  <div class="cgrid">
+ 
  <span class="sech">Investment &amp; fleet</span>
  <span class="lbl">Investment &euro;</span>
  <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
@@ -133,32 +190,20 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
   <div id="fleetRows"></div>
   <div class="fbtns"><button id="fleetAdd" type="button">+ add</button><button id="fleetSave" type="button">Save</button><span id="fleetMsg"></span></div>
  </details>
-</aside>
-<div class="main">
-<div class="cards" id="cards"></div>
-
-
-
-<h2>Monthly cost &mdash; local 24/7 vs cloud at your current token rate</h2>
-<div class="sub" id="replaysub"></div>
-<table><thead><tr class="hd-red"><th>Model</th><th class="num">in &euro;/1M</th><th class="num">out &euro;/1M</th>
-<th class="num">month cost</th><th class="num">batch API</th><th>basis</th></tr></thead>
-<tbody id="replay"></tbody></table>
-<div class="sub">edit in/out prices to adapt them (amber border = edited, ✎ badge) &middot; AA = Artificial Analysis Intelligence Index (2026-10-20) &middot; open-weight: token cost projected monthly at your current hourly rate x Hours/day, x Cluster users (cache 90% incl. cache-write on misses; batch API = batch price list for non-interactive work) &middot; &#11014;Nx &gt;272k = long-context surcharge on input above the threshold &middot; closed-weight: fixed top-tier subscription x Cluster users &middot; local: fleet fixed cost, always on (shared between users)</div>
-
-<h2>Investment break-even &mdash; <span id="bkmodel" style="color:var(--acc)"></span> vs local</h2>
-<div class="sub" id="bksub"></div>
-<table><thead><tr><th>Model</th><th class="num">in &euro;/1M</th><th class="num">out &euro;/1M</th><th>scenario</th><th class="num">cloud/month</th>
-<th class="num">savings/month</th><th class="num">payback</th></tr></thead>
-<tbody id="bk"></tbody></table>
-<div class="sub">payback = months of cloud savings needed to repay the investment, at the current usage rate projected monthly &middot; scenarios: no-cache, cache 90% (incl. cache-write), batch API (where the price list exposes batch prices) &middot; in &euro;/1M = effective input price used by the calculation (read-only here) &middot; out &euro;/1M editable (same override as the first table) &middot; open-weight scenarios per-token, closed-weight top-tier subscription</div>
-
-<h2>Repaid so far &mdash; <span id="rp2model" style="color:var(--acc)"></span> vs local (investment covered by real usage)</h2>
-<div class="sub" id="rpsub"></div>
-<table><thead><tr><th>Model</th><th class="num">cloud cached (total)</th><th class="num">local cost (total)</th><th class="num">savings</th><th class="num">repaid</th></tr></thead>
-<tbody id="rp2"></tbody></table>
-<div class="sub">cumulative totals from data/token_ledger.json &mdash; persistent across server restarts and reboots (counters reset is detected and folded in) &middot; local cost at the measured rate applied to the whole history &middot; repaid = share of the investment already covered by real usage, up to date</div>
-</div>
+  </div>
+ </div>
+ <div id="view-stats" class="view" hidden>
+  <h2>Power statistics &mdash; fleet</h2>
+  <div class="sub" id="statssub"></div>
+  <div class="winrow"><span class="lbl">Window:</span>
+   <button class="winbtn active" data-w="0" type="button">all</button>
+   <button class="winbtn" data-w="86400" type="button">24 h</button>
+   <button class="winbtn" data-w="604800" type="button">7 d</button></div>
+  <div class="cards" id="statcards"></div>
+  <table><thead><tr><th>mode</th><th class="num">samples</th><th class="num">mean W (host)</th><th class="num">peak W (host)</th></tr></thead>
+  <tbody id="statrows"></tbody></table>
+  <div class="sub">inference = sample with the monitored server reporting requests_running &gt; 0 &middot; idle = requests_running == 0 &middot; samples with the server unreachable are excluded from the split but kept in the overall mean/peak &middot; unknown = samples predating the P49 flag &middot; energy estimated at the sampler cadence &middot; peak W is the max summed fleet power in one sample</div>
+ </div>
 </div>
 <div class="footer" id="sub">loading...</div>
 <script>
@@ -204,6 +249,42 @@ function sparkline(key,color){
 }
 
 const themeBtn=document.getElementById('themeBtn');
+function showView(v){
+ document.querySelectorAll('.navbtn').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+ ['dash','config','stats'].forEach(k=>{const el=document.getElementById('view-'+k); if(el)el.hidden=k!==v;});
+ try{localStorage.setItem('sc-view',v)}catch(e){}
+ if(v==='stats')loadStats();
+}
+(()=>{const p=new URLSearchParams(location.search).get('view');
+ let v=(p&&['dash','config','stats'].includes(p))?p:(((()=>{try{return localStorage.getItem('sc-view')}catch(e){return null}})())||'dash');
+ document.addEventListener('DOMContentLoaded',()=>showView(v));})();
+document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+let statsWin=0;
+async function loadStats(){
+ const d=await(await fetch('/api/stats?window='+statsWin)).json();
+ if(d.error){document.getElementById('statssub').textContent='error: '+d.error;return;}
+ if(!d){document.getElementById('statssub').textContent='no power samples yet';return;}
+ const f=n=>n==null?'\u2014':(+n).toFixed(1);
+ const ek=n=>n==null?'\u2014':(+n).toFixed(2)+' kWh';
+ const span=d.window_s?`${Math.round(d.window_s/60)} min window`:'';
+ document.getElementById('statssub').textContent=`${d.samples} host samples over ${span} \u00b7 cadence 30 s`;
+ const cards=[['fleet mean power',f(d.fleet_mean_w)+' W',null,null],
+  ['fleet peak power',f(d.fleet_peak_w)+' W',null,null],
+  ['peak single host',f(d.peak_sample_w)+' W',null,null],
+  ['energy (window)',ek(d.energy_kwh_est),null,null]];
+ document.getElementById('statcards').innerHTML=cards.map(c=>`<div class="card"><div class="l">${c[0]}</div><div class="v">${c[1]}</div></div>`).join('');
+ const row=(lbl,m)=>`<tr><td>${lbl}</td><td class="num">${m.samples}</td><td class="num">${m.mean_host_w==null?'\u2014':f(m.mean_host_w)+' W'}</td><td class="num">${m.peak_host_w==null?'\u2014':f(m.peak_host_w)+' W'}</td></tr>`;
+ document.getElementById('statrows').innerHTML=
+  row('\u26a1 inference (running &gt; 0)',d.inference||{samples:0})+
+  row('💤 idle (running = 0)',d.idle||{samples:0})+
+  (d.unknown&&d.unknown.samples?row('? unknown (no flag)',d.unknown):'');
+}
+document.getElementById('view-stats').addEventListener('click',async e=>{
+ if(!e.target.classList.contains('winbtn'))return;
+ document.querySelectorAll('.winbtn').forEach(x=>x.classList.toggle('active',x===e.target));
+ statsWin=+e.target.dataset.w; await loadStats();
+});
+
 function applyTheme(t){document.body.classList.toggle('light',t==='light');themeBtn.textContent=t==='light'?'🌙':'\u2600\uFE0F';try{localStorage.setItem('sc-theme',t)}catch(e){}}
 applyTheme((()=>{const p=new URLSearchParams(location.search).get('theme');
  if(p==='light'||p==='dark')return p;
@@ -542,6 +623,15 @@ class H(BaseHTTPRequestHandler):
                              local_key=(q.get("local") or [None])[0])
                 payload = json.dumps(rep, indent=None, default=str)
                 self._send(200, payload.encode(), "application/json")
+            except Exception as e:  # noqa: BLE001
+                self._send(500, json.dumps({"error": str(e)}).encode(),
+                           "application/json")
+        elif u.path == "/api/stats":
+            # P49: power statistics (mean/peak fleet, inference vs idle events)
+            try:
+                w = int((q.get("window") or ["0"])[0] or 0)
+                self._send(200, json.dumps(fleet_stats(w or None)).encode(),
+                           "application/json")
             except Exception as e:  # noqa: BLE001
                 self._send(500, json.dumps({"error": str(e)}).encode(),
                            "application/json")

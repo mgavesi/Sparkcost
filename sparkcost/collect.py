@@ -282,6 +282,10 @@ def _db() -> sqlite3.Connection:
         gen_total INTEGER, watts REAL)""")
     con.execute("""CREATE TABLE IF NOT EXISTS power(
         ts INTEGER, host TEXT, watts REAL, PRIMARY KEY(ts, host))""")
+    try:  # P49: inference flag fleet-wide (dal server monitorato su questa macchina)
+        con.execute("ALTER TABLE power ADD COLUMN running INTEGER")
+    except sqlite3.OperationalError:
+        pass  # colonna gia' presente
     return con
 
 
@@ -314,10 +318,11 @@ def store_sample(m: dict) -> None:
         (int(time.time()), (m.get("server") or {}).get("name"),
          int(pt) if pt else None, int(gt) if gt else None, m.get("watts")))
     if m.get("fleet_watts"):
+        running = (c or {}).get("running")  # None = server non raggiungibile
         for host, w in m["fleet_watts"].items():
             if w is not None:
-                con.execute("INSERT OR REPLACE INTO power VALUES(?,?,?)",
-                            (int(time.time()), host, float(w)))
+                con.execute("INSERT OR REPLACE INTO power VALUES(?,?,?,?)",
+                            (int(time.time()), host, float(w), running))
     con.commit()
     con.close()
 
