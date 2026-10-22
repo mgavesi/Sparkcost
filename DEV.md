@@ -292,18 +292,17 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Roundtrip verified: 3 users -> GLM 302.49 (x3), GPT-5.5 sub 558 (186x3); 2 users -> 201.66; bk/users exposed in the API
 - Acceptance: editable and propagated users, A-Z dropdown, visible AA badge ✅
 
-### P38 — Tabella "Repaid so far" solo sul modello selezionato ✅ (2026-10-22, richiesta Marco)
-- [x] La tabella 3 mostrava i primi 8 modelli del ledger (r.models.slice(0,8)) indipendentemente dalla selezione
-- [x] Ora: SOLO il modello selezionato nel dropdown (filtro model===cloudModel), titolo dinamico "Repaid so far — <modello> vs local"
-- [x] Se il modello non ha storico nel ledger: 1 riga con trattini (—) invece di scomparire
-- [x] Verificato DOM stub: 1 riga GLM cloud (€24.71 vs €36.02, 0.0% repaid); JS ok
-- Nota: la tabella 2 (break-even) era già filtrata correttamente; il colpevole era solo il ledger
-- Criterio: tutte e 3 le tabelle ora mostrano 1 modello alla volta (quello selezionato) ✅
-
-### P39 — Fleet power: misura corretta + layout side panel ✅ (2026-10-22, richiesta Marco)
-- [x] BUG MISURA: integrated_watts() medava TUTTO lo storico del DB (6,8gg, affogato nell'idle notturno) → 15,8 W/unit; ora finestra ULTIMI 30 MIN (min(uptime,1800s)) → 57 W/unit, coerente con sparkDash (GPU 56-64 W) e nvidia-smi live (59,24 W) — cross-check 2026-10-22
-- [x] Chiarezza UI: card "fleet power · all units" + footer "power 114.0 W fleet = 57.0 W/unit × 2 units, time-weighted over 30 min" (il fleet ERA già moltiplicato, il valore di misura era sbagliato)
-- [x] LAYOUT: tutta la barra controlli (9 input/select + 2 bottoni) spostata in SIDE PANEL sinistro sticky (280px, collassa in alto <900px); .main flex-1 con cards+3 tabelle; footer fisso invariato
-- [x] DOM stub: T1 2 righe, T2/T3 1 riga ciascuna, footer con W/unit, label card ok; JS node --check ok
-- Nota: il sampler (sparkcost.collect --loop 60) scrive i campioni nel DB — va tenuto vivo per la finestra 30min; fallback spot se campioni insufficienti
-- Criterio: misura coerente con sparkDash, grafica con pannello a sinistra ✅
+### P43 — "Repaid so far" table filtered to the selected model ✅ (2026-10-22, owner request)
+- [x] Table 3 showed the first 8 ledger models (r.models.slice(0,8)) regardless of the selection
+- [x] Now: ONLY the model selected in the dropdown (filter model===cloudModel), dynamic title "Repaid so far — <model> vs local"
+- [x] If the model has no ledger history: one row of dashes (—) instead of disappearing
+- [x] Verified with DOM stub: one GLM cloud row (€24.71 vs €36.02, 0.0% repaid); JS ok
+- Note: table 2 (break-even) was already filtered correctly; the ledger table was the only culprit
+- Acceptance: all 3 tables now show one model at a time (the selected one) ✅
+### P44 — Fleet power: corrected measurement + side panel layout ✅ (2026-10-22, owner request)
+- [x] MEASUREMENT BUG: integrated_watts() averaged the ENTIRE DB history (6.8 days, drowned in nightly idle) -> 15.8 W/unit; now a LAST-30-MIN window (min(uptime,1800s)) -> 57 W/unit, consistent with sparkDash (GPUs 56-64 W) and live nvidia-smi (59.24 W) — cross-checked 2026-10-22
+- [x] UI clarity: "fleet power · all units" card + footer "power 114.0 W fleet = 57.0 W/unit × 2 units, time-weighted over 30 min" (the fleet multiplier was already applied; the measured value was wrong)
+- [x] LAYOUT: the whole control bar (9 inputs/selects + 2 buttons) moved to a sticky LEFT SIDE PANEL (280px, collapses on top <900px); .main flex-1 with cards + 3 tables; fixed footer unchanged
+- [x] DOM stub: T1 2 rows, T2/T3 1 row each, footer with W/unit, card labels ok; JS node --check ok
+- Note: the sampler (sparkcost.collect --loop 60) writes samples to the DB — keep it alive for the 30-min window; spot fallback if there are not enough samples
+- Acceptance: measurement consistent with sparkDash, side-panel layout ✅
