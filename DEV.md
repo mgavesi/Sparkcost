@@ -283,3 +283,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] **Dashboard footer**: shows the source ("power ... time-weighted over N min (N samples)" / "spot reading (sampler warming up)")
 - Note: with 2 samples/30s the report stays in "spot"; it switches to "integrated" automatically after 5 min of samples
 - Criteria: syntax ok, JS ok, dashboard 200, sampler active, DB accumulating ✅
+
+### P41 — Cluster users + alphabetical dropdown + AA score ✅ (2026-10-22, owner request)
+- [x] Editable "Cluster users" parameter (default 2, range 1-50): /api/users; CLOUD model costs scale x N (tokens and subscriptions, in both the monthly and break-even tables); LOCAL fleet cost stays fixed and shared
+- [x] Basis annotated: "x N users" on token and subscription rows; bksub shows the factor
+- [x] "Cloud model" dropdown sorted alphabetically (localeCompare)
+- [x] "AA <score>" badge next to the model name (first table) and in dropdown options: Artificial Analysis Intelligence Index, benchlm.ai snapshot 2026-10-20 (v4.3.x); AA_SCORES dict in models.py, attached in extract(); models missing from the top-100 (Cyber, Mythos, Sonnet 4.5) get no badge
+- [x] Roundtrip verified: 3 users -> GLM 302.49 (x3), GPT-5.5 sub 558 (186x3); 2 users -> 201.66; bk/users exposed in the API
+- Acceptance: editable and propagated users, A-Z dropdown, visible AA badge ✅

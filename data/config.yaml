@@ -1,6 +1,6 @@
 # sparkcost — configuration (edit freely)
 n_sparks: 2              # number of active Spark units in the fleet (multiplies energy + capex)
-eur_per_kwh: 0.22        # Eurostat Austria non-household 2025: 0.241 incl. taxes; 0.22 conservative (P38)
+eur_per_kwh: 0.12
 usd_eur: 0.93
 hardware_total_eur: 8800.0
 amort_years: 5.0
@@ -12,6 +12,7 @@ always_on: true          # machines always on 24/7 (idle on all hours)
 hours_per_day: 24.0
 in_out_ratio: 3          # typical input:output token ratio (affects the cloud comparison)
 cache_hit_rate: 0.9      # share of prompt tokens served from cache in cloud cache scenarios
+users: 2
 
 # Consumer subscriptions USD/month for closed-weight models — used in the break-even.
 # For the comparison against HEAVY local usage, each vendor's MAXIMUM performance tier

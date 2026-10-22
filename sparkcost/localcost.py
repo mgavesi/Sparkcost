@@ -169,6 +169,17 @@ def save_depreciation(enabled: bool) -> None:
     CONFIG.write_text(text)
 
 
+def save_users(n: float) -> None:
+    """Aggiorna solo la riga users nel config (preserva commenti)."""
+    n = max(1, int(round(n)))
+    text = CONFIG.read_text()
+    if re.search(r"^users:", text, re.M):
+        text = re.sub(r"^users:.*$", f"users: {n}", text, flags=re.M)
+    else:
+        text = text.rstrip() + f"\nusers: {n}\n"
+    CONFIG.write_text(text)
+
+
 def load_price_overrides() -> dict:
     """User-edited prices: {model: {in_usd,out_usd,cache_usd}}."""
     if not PRICE_OVERRIDES.exists():
@@ -353,6 +364,7 @@ def replay_cost(cfg: dict, counters: dict, srv: dict, rows: list[dict],
     proj_basis = (f"{h_day:g} h/day machine commitment, observed over "
                   f"{_fmt_period(uptime / 86400)}")
     subs_cfg = cfg.get("subscriptions") or {}
+    n_users = int(cfg.get("users", 2))
     parts = local_month_breakdown(cfg, watts)
     amort_month_full = parts["amort"]
     energy_month = parts["idle_energy"] + parts["token_energy"]
@@ -395,19 +407,21 @@ def replay_cost(cfg: dict, counters: dict, srv: dict, rows: list[dict],
         plans = subs_cfg.get(r["vendor"])
         if plans:
             top = max(plans, key=lambda x: x["usd"])
-            month_cost = top["usd"] * usd
-            month_basis = f"subscription: {top['plan']}"
+            month_cost = top["usd"] * usd * n_users
+            month_basis = f"subscription: {top['plan']} x {n_users} users"
             month_sub = True
         else:
-            month_cost = (pt_m * blend_in + gt_m * r["out_per_1m_usd"]) / 1e6 * usd
-            month_basis = f"token @ current rate (cache {int(ch*100)}%)"
+            month_cost = (pt_m * blend_in + gt_m * r["out_per_1m_usd"]) / 1e6 * usd * n_users
+            month_basis = f"token @ current rate (cache {int(ch*100)}%) x {n_users} users"
             month_sub = False
         models_out.append({
             "model": r["model"], "vendor": r["vendor"],
             "cost_nocache_eur": nocache, "cost_cached_eur": cached,
             "cost_batch_eur": batch,
             "month_cost_eur": month_cost, "month_basis": month_basis,
-            "month_batch_eur": batch_month,  # also for subs: programmatic API usage comparison
+            "month_batch_eur": batch_month * n_users if batch_month is not None else None,
+            "aa_score": r.get("aa_score"),
+            "users": n_users,
             "month_sub": month_sub, "edited": bool(r.get("_edited")),
             "lc_mult": r.get("lc_input_mult"),
             "in_eur_1m": r["in_per_1m_usd"] * usd,
@@ -452,6 +466,7 @@ def breakeven(cfg: dict, counters: dict, srv: dict, rows: list[dict],
     n = int(cfg.get("n_sparks", 1))
     usd = cfg["usd_eur"]
     ch = cfg.get("cache_hit_rate", 0.9)
+    n_users = int(cfg.get("users", 2))
     watts = watts or cfg["idle_watts"]
     days = uptime / 86400
 
@@ -502,16 +517,16 @@ def breakeven(cfg: dict, counters: dict, srv: dict, rows: list[dict],
             cloud_batch = (pt_m * b_blend + gt_m * r["out_per_1m_usd"] * m_out) / 1e6 * usd
         else:
             cloud_batch = None
-        scens = [("no-cache", cloud_nocache, r["in_per_1m_usd"])]
+        scens = [("no-cache", cloud_nocache * n_users, r["in_per_1m_usd"])]
         if cache_price:
-            scens.append((f"cache {int(ch*100)}%", cloud_cached, blend_in))
+            scens.append((f"cache {int(ch*100)}%", cloud_cached * n_users, blend_in))
         if cloud_batch is not None:
-            scens.append(("batch API", cloud_batch, b_blend))
+            scens.append(("batch API", cloud_batch * n_users, b_blend))
         for scen, cloud, in_eff in scens:
             savings = cloud - local_month
             payback_m = capex / savings if savings > 0 else None
             out.append({
-                "model": r["model"], "scenario": scen,
+                "model": r["model"], "scenario": scen, "aa_score": r.get("aa_score"),
                 # in_eff = the input price EFFECTIVELY used in the calculation
                 # (list price for no-cache; blended cache+list for cached)
                 "in_eur_1m": r["in_per_1m_usd"] * usd,
@@ -528,11 +543,11 @@ def breakeven(cfg: dict, counters: dict, srv: dict, rows: list[dict],
     for m in rows:
         plans = (cfg.get("subscriptions") or {}).get(m["vendor"], [])
         for plan in plans:
-            cloud = plan["usd"] * usd
+            cloud = plan["usd"] * usd * n_users
             savings = cloud - local_month
             payback_m = capex / savings if savings > 0 else None
             out.append({
-                "model": m["model"], "scenario": f"{plan['plan']} (sub)",
+                "model": m["model"], "scenario": f"{plan['plan']} (sub)", "aa_score": m.get("aa_score"),
                 "in_eur_1m": m["in_per_1m_usd"] * usd,
                 "in_eff_eur_1m": m["in_per_1m_usd"] * usd,
                 "out_eur_1m": m["out_per_1m_usd"] * usd,
@@ -548,7 +563,7 @@ def breakeven(cfg: dict, counters: dict, srv: dict, rows: list[dict],
         "prompt_m_month": pt_m, "gen_m_month": gt_m,
         "amort_month_eur": amort_month, "energy_month_eur": energy_month,
         "token_energy_month_eur": parts["token_energy"],
-        "local_month_parts": parts,
+        "local_month_parts": parts, "users": n_users,
         "local_month_eur": local_month, "basis": basis, "scenarios": out,
     }
     if not cfg.get("depreciation", True):

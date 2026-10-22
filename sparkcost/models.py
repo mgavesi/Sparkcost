@@ -71,6 +71,23 @@ PEER_MODELS = [
     ("xai/grok-4.6", "Grok 4.6", "xAI"),
 ]
 
+# Artificial Analysis Intelligence Index (v4.3.x), snapshot benchlm.ai 2026-10-20.
+# Modelli mancanti = non presenti nella top-100 dell'indice (varianti Cyber, Mythos,
+# Sonnet 4.5): nessun badge. Qwen Max mappato su "Qwen3.8 Max Preview".
+AA_SCORES = {
+    "GPT-5.6 Sol": 58.9, "Claude Opus 5.5": 57.6, "Claude Sonnet 5.5": 56.0,
+    "GPT-5.6 Terra": 55.0, "Claude Fable 5.1": 53.4, "DeepSeek V4 Pro": 53.2,
+    "GPT-6 Astra": 52.7, "GPT-6.1 Sol": 51.8, "Claude Opus 5": 50.8,
+    "Claude Fable 5": 49.6, "GPT-6 Sol": 47.6, "Qwen Max": 45.4,
+    "Grok 4.6": 44.3, "Kimi K3": 43.6, "Claude Opus 4.8": 41.8,
+    "Gemini 3.8 Flash": 40.9, "GLM 5.3 Flash (cloud)": 41.8,  # GLM-5.3-Flash
+    "Claude Opus 4.7": 40.7,  # Adaptive (config di default con cui spedisce)
+    "DeepSeek V4.1 Flash": 39.5, "GPT-5.4": 39.0, "Grok 4.5": 38.8,
+    "GPT-5.5": 38.4, "Claude Sonnet 5": 38.2, "GPT-5.2": 30.4,
+    "Gemini 3.1 Pro": 29.7, "Claude Opus 4.6": 26.4, "GPT-5.1": 24.7,
+    "Claude Sonnet 4.6": 24.7, "Claude Opus 4.5": 23.7, "GPT-5": 23.0,
+}
+
 
 def fetch_snapshot(force: bool = False) -> dict:
     """Load the local snapshot; download from GitHub if absent or --refresh."""
@@ -279,6 +296,7 @@ def extract(data: dict, limit: int | None = None) -> list[dict]:
             "model": label,
             "litellm_key": key,
             "vendor": vendor,
+            "aa_score": AA_SCORES.get(label),
             "in_per_1m_usd": (_num(entry.get("input_cost_per_token")) or 0) * 1e6,
             "out_per_1m_usd": (_num(entry.get("output_cost_per_token")) or 0) * 1e6,
             "in_cache_per_1m_usd": (

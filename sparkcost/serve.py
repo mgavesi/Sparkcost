@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_price, clear_price
+from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_price, clear_price
 
 PORT = 8900
 
@@ -65,7 +65,7 @@ td input.pr.edited{border-color:var(--warn);color:var(--warn)}
 td input.pr:disabled{color:var(--mut);border-color:transparent}
 .badge{color:var(--warn);font-size:10px;margin-left:4px}
 #locwarn,#capexsaved,#tariffsaved,#hourssaved{color:var(--warn);font-size:11px;margin-left:6px}
-#capexsaved,#tariffsaved,#hourssaved,#amortsaved{color:var(--acc)}
+#capexsaved,#tariffsaved,#hourssaved,#amortsaved,#userssaved{color:var(--acc)}
 .footer{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--b);
 padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
@@ -88,6 +88,10 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
  <label class="chip" id="deprchip" title="uncheck if the Spark was bought privately: capex not depreciated, local cost = energy only">
   <input id="depr" type="checkbox" checked> Depreciate</label>
  <span class="sep"></span>
+ <span class="lbl">&nbsp;&nbsp;Cluster users</span>
+ <input id="users" type="number" step="1" min="1" max="50" placeholder="2">
+ <span id="userssaved"></span>
+ <span class="sep"></span>
  <span class="lbl">Cloud model</span>
  <select id="cloudsel"></select>
  <span class="sep"></span>
@@ -104,7 +108,7 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 <table><thead><tr class="hd-red"><th>Model</th><th class="num">in &euro;/1M</th><th class="num">out &euro;/1M</th>
 <th class="num">month cost</th><th class="num">batch API</th><th>basis</th></tr></thead>
 <tbody id="replay"></tbody></table>
-<div class="sub">edit in/out prices to adapt them (amber border = edited, ✎ badge) &middot; open-weight: token cost projected monthly at your current hourly rate x Hours/day (cache 90% incl. cache-write on misses; batch API = batch price list for non-interactive work) &middot; &#11014;Nx &gt;272k = long-context surcharge on input above the threshold &middot; closed-weight: fixed top-tier subscription &middot; local: fleet fixed cost, always on</div>
+<div class="sub">edit in/out prices to adapt them (amber border = edited, ✎ badge) &middot; AA = Artificial Analysis Intelligence Index (2026-10-20) &middot; open-weight: token cost projected monthly at your current hourly rate x Hours/day, x Cluster users (cache 90% incl. cache-write on misses; batch API = batch price list for non-interactive work) &middot; &#11014;Nx &gt;272k = long-context surcharge on input above the threshold &middot; closed-weight: fixed top-tier subscription x Cluster users &middot; local: fleet fixed cost, always on (shared between users)</div>
 
 <h2>Investment break-even &mdash; <span id="bkmodel" style="color:var(--acc)"></span> vs local</h2>
 <div class="sub" id="bksub"></div>
@@ -177,9 +181,11 @@ function buildCloudSelector(models){
  const sel=document.getElementById('cloudsel');
  if(!models.some(m=>m.model===cloudModel))cloudModel=DEF_CLOUD;
  sel.innerHTML='';
- for(const m of models){
+ const sorted=models.slice().sort((a,b)=>a.model.localeCompare(b.model));
+ for(const m of sorted){
   const op=document.createElement('option');
-  op.value=m.model;op.textContent=m.model;
+  op.value=m.model;
+  op.textContent=m.model+(m.aa_score!=null?`  —  AA ${m.aa_score.toFixed(1)}`:'');
   if(m.model===cloudModel)op.selected=true;
   sel.appendChild(op);
  }
@@ -213,6 +219,8 @@ async function tick(force){ try{
  const ai=document.getElementById('amort');
  if(document.activeElement!==ai && cfg.amort_years!=null)ai.value=+cfg.amort_years;
  ai.disabled=cfg.depreciation===false;
+ const ui=document.getElementById('users');
+ if(document.activeElement!==ui && cfg.users!=null)ui.value=+cfg.users;
  const de=document.getElementById('depr');
  if(de)de.checked=cfg.depreciation!==false;
 
@@ -249,10 +257,11 @@ async function tick(force){ try{
   if(sel){
    const mine=localLabel&&sel.model===localLabel;
    const ed=sel.edited?`<span class="badge" title="edited price">✎</span>`:'';
+   const aa=sel.aa_score!=null?`<span class="badge" title="Artificial Analysis Intelligence Index (benchlm.ai, 2026-10-20)">AA ${sel.aa_score.toFixed(1)}</span>`:'';
    const dis=sel.month_sub?' disabled title="fixed subscription cost - edit plans in data/config.yaml"':'';
    const lc=sel.lc_mult?`<span class="badge" style="color:var(--warn)" title="input price x${sel.lc_mult} above the long-context threshold (LiteLLM price list)">&#11014; ${sel.lc_mult}x &gt;272k</span>`:'';
    const mb=sel.month_batch_eur!=null?`<td class="num">${eur(sel.month_batch_eur)}</td>`:'<td class="num">&mdash;</td>';
-   rh+=`<tr class="${mine?'mine':''}"><td>${sel.model}${mine?' ★':''}${ed}${lc}</td>`+
+   rh+=`<tr class="${mine?'mine':''}"><td>${sel.model}${mine?' ★':''} ${aa}${ed}${lc}</td>`+
     `<td class="num"><input class="pr${sel.edited?' edited':''}" data-model="${sel.model}" data-field="in" value="${(+sel.in_eur_1m).toFixed(3)}"${dis}></td>`+
     `<td class="num"><input class="pr${sel.edited?' edited':''}" data-model="${sel.model}" data-field="out" value="${(+sel.out_eur_1m).toFixed(3)}"${dis}></td>`+
     `<td class="num">${eur(sel.month_cost_eur)}</td>${mb}<td><span class="basis">${sel.month_basis}</span></td></tr>`;
@@ -356,6 +365,15 @@ document.getElementById('amort').addEventListener('change',async e=>{
  else out.textContent=r.error||'error';
  setTimeout(()=>out.textContent='',2500);
 });
+document.getElementById('users').addEventListener('change',async e=>{
+ const v=parseInt(e.target.value,10);
+ const out=document.getElementById('userssaved');
+ if(!(v>=1)||v>50){out.textContent='1-50 only';setTimeout(()=>out.textContent='',2500);return;}
+ const r=await(await fetch('/api/users?value='+encodeURIComponent(v))).json();
+ if(r.ok){out.textContent='saved ✓';await tick();}
+ else out.textContent=r.error||'error';
+ setTimeout(()=>out.textContent='',2500);
+});
 document.getElementById('depr').addEventListener('change',async e=>{
  const r=await(await fetch('/api/depreciation?value='+e.target.checked)).json();
  if(r.ok)await tick();
@@ -428,6 +446,8 @@ class H(BaseHTTPRequestHandler):
             save_depreciation(enabled)
             self._send(200, json.dumps({"ok": True, "depreciation": enabled}).encode(),
                        "application/json")
+        elif u.path == "/api/users":
+            self._save_param(q, save_users)
         elif u.path == "/api/price":
             try:
                 if q.get("action") == ["clear"]:
