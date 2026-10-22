@@ -205,6 +205,55 @@ def apply_price_overrides(rows: list[dict], overrides: dict) -> int:
     return n
 
 
+_CFG_PARAMS = {  # P48: scalar config keys editable from the panel
+    "n_sparks": int, "assumed_tok_s": int, "in_out_ratio": int,
+    "eur_per_kwh": float, "usd_eur": float, "idle_watts": float,
+    "cache_hit_rate": float,
+}
+_CFG_RANGE = {"n_sparks": (1, 64), "assumed_tok_s": (1, 100000),
+              "in_out_ratio": (1, 1000), "eur_per_kwh": (0, 10),
+              "usd_eur": (0, 10), "idle_watts": (1, 2000),
+              "cache_hit_rate": (0, 1)}
+
+
+def save_cfg_params(params: dict) -> list:
+    """P48: generic config editor for the panel — whitelisted keys, typed and
+    range-checked, written line-preserving (same pattern as save_users).
+    Returns the list of saved keys; raises ValueError on anything invalid."""
+    if not isinstance(params, dict) or not params:
+        raise ValueError("no params")
+    bad = [k for k in params if k not in _CFG_PARAMS and k != "always_on"]
+    if bad:
+        raise ValueError("unknown keys: " + ", ".join(bad))
+    vals: dict = {}
+    for k, v in params.items():
+        if k == "always_on":
+            vals[k] = bool(v)
+            continue
+        lo, hi = _CFG_RANGE[k]
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"{k}: not a number")
+        if not (lo <= fv <= hi):
+            raise ValueError(f"{k}: allowed {lo}-{hi}")
+        vals[k] = int(round(fv)) if _CFG_PARAMS[k] is int else fv
+    text = CONFIG.read_text()
+    for k, v in vals.items():
+        if v is True:
+            line = f"{k}: true"
+        elif v is False:
+            line = f"{k}: false"
+        else:
+            line = f"{k}: {v}"
+        if re.search(rf"^{k}:", text, re.M):
+            text = re.sub(rf"^{k}:.*$", line, text, flags=re.M)
+        else:
+            text = text.rstrip() + f"\n{line}\n"
+    CONFIG.write_text(text)
+    return list(vals)
+
+
 def _fleet_public() -> list:
     """P47: fleet hosts masked (no password, only has_password) for the UI."""
     from .collect import load_fleet

@@ -11,7 +11,7 @@ assumed_tok_s: 40        # used if the server is idle in the measurement window
 always_on: true          # machines always on 24/7 (idle on all hours)
 hours_per_day: 24.0
 in_out_ratio: 3          # typical input:output token ratio (affects the cloud comparison)
-cache_hit_rate: 0.9      # share of prompt tokens served from cache in cloud cache scenarios
+cache_hit_rate: 0.9
 users: 2
 
 # Consumer subscriptions USD/month for closed-weight models — used in the break-even.

@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_price, clear_price
+from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_cfg_params, save_price, clear_price
 from .collect import save_fleet, test_fleet_host
 
 PORT = 8900
@@ -56,6 +56,7 @@ td .basis{color:var(--mut);font-size:10px}
 .wrap{display:flex;gap:20px;align-items:flex-start}
 .side{width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px;position:sticky;top:16px}
 .side .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
+.side .sech{display:block;color:var(--acc);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin:16px 0 2px;border-bottom:1px solid var(--b);padding-bottom:3px;font-weight:700}
 .field{display:flex;align-items:center;gap:6px;margin-top:2px}
 .field input,.side select{flex:1;min-width:0;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
 .field input:focus,.side select:focus{border-color:var(--acc);outline:none}
@@ -91,18 +92,35 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 <div class="wrap">
 <aside class="side">
  <div class="hdr"><img src="/logo.jpg" alt="sparkcost"><button id="themeBtn" type="button" title="dark / light">&#9728;&#65039;</button></div>
+ <span class="sech">Investment &amp; fleet</span>
  <span class="lbl">Investment &euro;</span>
  <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
+ <span class="lbl">Number of machines</span>
+ <div class="field"><input id="cfg_n_sparks" type="number" step="1" min="1" max="64"><span class="saved" id="cfgsaved_n_sparks"></span></div>
+ <span class="lbl">Idle W / unit</span>
+ <div class="field"><input id="cfg_idle_watts" type="number" step="1" min="1" max="2000"><span class="saved" id="cfgsaved_idle_watts"></span></div>
+ <span class="lbl">USD &rarr; EUR</span>
+ <div class="field"><input id="cfg_usd_eur" type="number" step="0.01" min="0" max="10"><span class="saved" id="cfgsaved_usd_eur"></span></div>
+ <span class="sech">Energy &amp; usage</span>
  <span class="lbl">Energy &euro;/kWh</span>
  <div class="field"><input id="tariff" type="number" step="0.01" min="0" placeholder="0.28"><span class="saved" id="tariffsaved"></span></div>
  <span class="lbl">Hours/day</span>
  <div class="field"><input id="hours" type="number" step="0.5" min="0" max="24" placeholder="8"><span class="saved" id="hourssaved"></span></div>
  <span class="lbl">Amort years</span>
  <div class="field"><input id="amort" type="number" step="1" min="1" max="15" placeholder="5"><span class="saved" id="amortsaved"></span></div>
+ <label class="chip" title="fleet powered 24/7: idle energy counts on all hours">
+  <input id="cfg_always_on" type="checkbox"> Always on 24/7</label><span class="saved" id="cfgsaved_always_on"></span>
  <label class="chip" id="deprchip" title="uncheck if the Spark was bought privately: capex not depreciated, local cost = energy only">
   <input id="depr" type="checkbox" checked> Depreciate</label>
+ <span class="lbl">Fallback tok/s (idle server)</span>
+ <div class="field"><input id="cfg_assumed_tok_s" type="number" step="1" min="1" max="100000"><span class="saved" id="cfgsaved_assumed_tok_s"></span></div>
+ <span class="lbl">In:Out token ratio</span>
+ <div class="field"><input id="cfg_in_out_ratio" type="number" step="1" min="1" max="1000"><span class="saved" id="cfgsaved_in_out_ratio"></span></div>
+ <span class="lbl">Cache hit rate (0-1)</span>
+ <div class="field"><input id="cfg_cache_hit_rate" type="number" step="0.01" min="0" max="1"><span class="saved" id="cfgsaved_cache_hit_rate"></span></div>
  <span class="lbl">Cluster users</span>
  <div class="field"><input id="users" type="number" step="1" min="1" max="50" placeholder="2"><span class="saved" id="userssaved"></span></div>
+ <span class="sech">Models</span>
  <span class="lbl">Cloud model</span>
  <select id="cloudsel"></select>
  <span class="lbl">Local model</span>
@@ -223,6 +241,28 @@ document.getElementById('fleetRows').addEventListener('click',async e=>{
  res.textContent=r.ok?('\u2713 '+(+r.watts).toFixed(1)+' W'):('\u2715 '+(r.error||'fail'));
 });
 
+const CFG_NUM={n_sparks:[1,64,'int'],usd_eur:[0,10,'float'],idle_watts:[1,2000,'float'],assumed_tok_s:[1,100000,'int'],in_out_ratio:[1,1000,'int'],cache_hit_rate:[0,1,'float']};
+for(const [k,[mn,mx,ty]] of Object.entries(CFG_NUM)){
+ const el=document.getElementById('cfg_'+k); if(!el)continue;
+ el.addEventListener('change',async()=>{
+  let v=parseFloat(el.value);
+  const out=document.getElementById('cfgsaved_'+k);
+  if(isNaN(v)||v<mn||v>mx){if(out){out.textContent=mn+'-'+mx;setTimeout(()=>out.textContent='',2500);}return;}
+  if(ty==='int')v=Math.round(v);
+  const body={};body[k]=v;
+  const r=await(await fetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(r.ok){if(out)out.textContent='saved \u2713';await tick(true);} else if(out)out.textContent=r.error||'error';
+  if(out)setTimeout(()=>out.textContent='',2500);
+ });
+}
+const aoEl=document.getElementById('cfg_always_on');
+if(aoEl)aoEl.addEventListener('change',async e=>{
+ const r=await(await fetch('/api/cfg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({always_on:e.target.checked})})).json();
+ const out=document.getElementById('cfgsaved_always_on');
+ if(out){out.textContent=r.ok?'saved \u2713':(r.error||'error');setTimeout(()=>out.textContent='',2500);}
+ if(r.ok)await tick(true);
+});
+
 function buildLocalSelector(d){
  const sel=document.getElementById('locsel');
  const opts=[['','Auto-detect'+(d.server&&d.server.name?' ('+d.server.name+')':'')]];
@@ -286,6 +326,8 @@ async function tick(force){ try{
  if(document.activeElement!==ui && cfg.users!=null)ui.value=+cfg.users;
  const de=document.getElementById('depr');
  if(de)de.checked=cfg.depreciation!==false;
+ for(const k of ['n_sparks','usd_eur','idle_watts','assumed_tok_s','in_out_ratio','cache_hit_rate']){const el=document.getElementById('cfg_'+k); if(el&&document.activeElement!==el&&d.cfg[k]!=null)el.value=d.cfg[k];}
+ const ao=document.getElementById('cfg_always_on'); if(ao&&document.activeElement!==ao)ao.checked=d.cfg.always_on!==false;
 
  pushHist('power',L.watts_fleet);pushHist('eff',L.eff_eur_1m);
  // sparklines ONLY on: fleet power, local effective
@@ -591,6 +633,14 @@ class H(BaseHTTPRequestHandler):
                            "application/json")
             except Exception as e:  # noqa: BLE001
                 self._send(500, json.dumps({"ok": False, "error": str(e)}).encode(),
+                           "application/json")
+        elif u.path == "/api/cfg":
+            try:
+                saved = save_cfg_params(body if isinstance(body, dict) else {})
+                self._send(200, json.dumps({"ok": True, "saved": saved}).encode(),
+                           "application/json")
+            except ValueError as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}).encode(),
                            "application/json")
         else:
             self._send(404, b"not found", "text/plain")

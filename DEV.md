@@ -331,3 +331,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] VERIFICATO LIVE: fleet/test spark-02 → {"ok":true,"watts":10.69} (idle notturna); save roundtrip preserva password; n_sparks=2 synced; footer integrated per-host (spark-01 56.1 W + spark-02 48.7 W = 104.9 W); entrambi i temi screenshotati; 0 errori JS
 - Bugfix during dev: emoji JS come escape \uD83C\uDF19 diventava surrogate Python invalido all'encode UTF-8 dell'HTML → emoji reali nel sorgente
 - Acceptance: tema commutabile, card uniformi su 2 righe, ombra sparkline, configurazione cluster completa con test live ✅
+
+### P48 — Pannello configurazione: tutti i parametri di input ✅ (2026-10-22, owner request)
+- [x] Side panel organizzato in sezioni: INVESTMENT & FLEET (investment €, number of machines, idle W/unit, USD→EUR) · ENERGY & USAGE (energy €/kWh, hours/day, amort years, always on 24/7, depreciate, fallback tok/s, in:out ratio, cache hit rate, cluster users) · MODELS (cloud + local) · Cluster machines (P47)
+- [x] Nuovi campi editabili: n_sparks, idle_watts, usd_eur, assumed_tok_s, in_out_ratio, cache_hit_rate, always_on — popolati dal cfg nel tick, salvati su change
+- [x] Endpoint POST /api/cfg: whitelist chiavi (_CFG_PARAMS), tipizzazione int/float, range-check (_CFG_RANGE), scrittura line-preserving in config.yaml; errori espliciti ("unknown keys: …", "allowed 0-10")
+- [x] VERIFICATO LIVE: POST valido {cache_hit_rate:0.9} → ok saved; {hackme:1} → 400 unknown keys; {eur_per_kwh:99} → 400 allowed 0-10; campi popolati dal summary (n_sparks 2, idle 17, usd 0.93, tok/s 40, ratio 3, cache 0.9, always_on true); 0 errori JS
+- Acceptance: tutti i parametri di input editabili dal pannello di configurazione ✅
