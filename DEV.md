@@ -389,3 +389,12 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Mobile (<900px): sidebar torna statica e il bottone torna subito sotto il menu (height auto, margin 6px)
 - [x] VERIFICATO via CDP: btnFondoSide=true, btnSottoMenu=true, nelViewport=true (btn bottom 932 vs side bottom 949, viewport 957)
 - Acceptance: toggle in basso a sinistra ✅
+
+### P56 — Fleet power modello sparkDash: serie server-side + auto-refresh ✅ (2026-10-23 09:26, owner request)
+- [x] Studio sorgente ufficiale https://github.com/MiaAI-Lab/sparkDash: metricsStore.ts (ring buffer server-fed, SPARKLINE_TAIL=30), fleetStats.ts (powerW = somma draw istantanei), poll 2s. Il browser NON accumula storia: una sola fonte verità.
+- [x] Diagnosi vecchio codice: (1) il browser accumulava storia in localStorage mescolando vecchi punti a media 30-min con nuovi live -> sparkline incoerente; (2) la dashboard NON si auto-aggiornava MAI (un solo tick al load) -> numero "lento" fino a reload manuale
+- [x] Fix backend: stats.power_series() = serie RAW dal DB sampler (somma per host per ts, coda 60 punti ~30min, cadence rilevata); iniettata come rep["power_series"]
+- [x] Fix frontend: rimosso pushHist/sparkcost.hist (0 riferimenti rimasti); sparkline(ppts) diretta; numero card = power_series.last_w; footer "X W live · cost basis Y W"; auto-refresh setInterval 30s (document.hidden-aware)
+- [x] Bugfix refactor: "key is not defined" (gid) + punti ora coppie [ts,w] -> vals estratti
+- [x] VERIFICATO LIVE: card 23.3 W = power_series.last_w stesso istante; sparkline discesa reale 119->23 W su 60 punti; footer live/cost basis; 0 errori render
+- Acceptance: numero e sparkline stessa serie server-side + aggiornamento automatico ✅

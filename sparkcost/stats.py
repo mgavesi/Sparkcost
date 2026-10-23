@@ -79,6 +79,39 @@ def fleet_stats(window_s: int | None = None) -> dict | None:
     }
 
 
+def power_series(max_points: int = 60, max_age_s: int = 3600) -> dict | None:
+    """P56, modello sparkDash (metricsStore/ringBuffer): serie RAW fleet power
+    = somma sui host per ogni ts del sampler, coda di max_points (~30 min a 30s).
+    FONTE UNICA server-side per valore card + sparkline: il browser non accumula
+    piu' storia locale (niente mix di vecchie medie 30-min con punti live)."""
+    if not DB.exists() or DB.stat().st_size == 0:
+        return None
+    con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    try:
+        since = int(time.time()) - max_age_s
+        rows = con.execute(
+            "SELECT ts,host,watts FROM power WHERE watts IS NOT NULL AND ts>=? ORDER BY ts",
+            (since,)).fetchall()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        con.close()
+    if not rows:
+        return None
+    per_ts: dict[int, float] = {}
+    for ts, _host, w in rows:
+        per_ts[ts] = per_ts.get(ts, 0.0) + w
+    ts_sorted = sorted(per_ts)
+    if len(ts_sorted) < 2:
+        return None
+    diffs = [b - a for a, b in zip(ts_sorted, ts_sorted[1:]) if b > a]
+    cadence = sorted(diffs)[len(diffs) // 2] if diffs else None
+    tail = ts_sorted[-max_points:]
+    return {"points": [[t, round(per_ts[t], 1)] for t in tail],
+            "last_w": per_ts[ts_sorted[-1]], "cadence_s": cadence,
+            "span_s": tail[-1] - tail[0]}
+
+
 def live_power(max_age_s: int = 180) -> dict | None:
     """P54: fleet power LIVE dal sampler = somma dell'ultimo campione per host
     (solo host con un campione entro max_age_s). None se nessun dato fresco."""

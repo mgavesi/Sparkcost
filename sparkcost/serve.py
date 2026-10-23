@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_cfg_params, save_price, clear_price
 from .collect import save_fleet, test_fleet_host
-from .stats import fleet_stats, live_power
+from .stats import fleet_stats, live_power, power_series
 
 PORT = 8900
 
@@ -209,24 +209,21 @@ const DEF_CLOUD='GLM 5.3 Flash (cloud)';
 let cloudModel=localStorage.getItem('sparkcost.cloud')||DEF_CLOUD;
 let locBuilt=false, localLabel=null;
 let localOverride=localStorage.getItem('sparkcost.local')||'';
-let hist={};
-try{const h=JSON.parse(localStorage.getItem('sparkcost.hist'));if(h&&typeof h==='object')hist=h;}catch(e){}
 
-function pushHist(key,val){
- if(!hist[key])hist[key]=[];
- if(val!=null&&!isNaN(val))hist[key].push(+val);
- if(hist[key].length>20)hist[key]=hist[key].slice(-20);
- localStorage.setItem('sparkcost.hist',JSON.stringify(hist));
-}
-function sparkline(key,color){
- const pts=hist[key]||[];
- if(pts.length<2)return '';
+// P56 modello sparkDash: la serie vive SOLO server-side (power_series); il browser
+// non accumula storia locale -> numero e sparkline coerenti per costruzione.
+let sparkSeq=0;
+function sparkline(pts,color){
+ if(!pts||pts.length<2)return '';
+ // P56: pts = coppie [ts,watts] dalla serie server-side (modello sparkDash)
+ const vals=pts.map(p=>+p[1]).filter(Number.isFinite);
+ if(vals.length<2)return '';
  const w=100,h=30,pad=2;
- const mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1;
- const xy=pts.map((v,i)=>[pad+i*(w-2*pad)/(pts.length-1), h-pad-((v-mn)/rg)*(h-2*pad)]);
+ const mn=Math.min(...vals),mx=Math.max(...vals),rg=(mx-mn)||1;
+ const xy=vals.map((v,i)=>[pad+i*(w-2*pad)/(vals.length-1), h-pad-((v-mn)/rg)*(h-2*pad)]);
  const line='M'+xy.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
  const area=line+` L${xy[xy.length-1][0].toFixed(1)},${h} L${xy[0][0].toFixed(1)},${h} Z`;
- const gid='g'+key;
+ const gid='gsp'+(++sparkSeq);
  const last=xy[xy.length-1];
  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
   <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -379,13 +376,17 @@ async function tick(force){ try{
  const d=await(await fetch('/api/summary'+q)).json();
  if(d.error){document.getElementById('sub').textContent='error: '+d.error;return;}
  const L=d.local, cfg=d.cfg, rp=d.replay, lm=d.local_model||{};
+ // P56: fonte unica power = serie RAW dal sampler (ultimo punto = valore card)
+ const ppts=(d.power_series&&d.power_series.points)||[];
+ const powerNow=(d.power_series&&d.power_series.last_w!=null)?+d.power_series.last_w
+  :((d.live_power&&d.live_power.fleet_w!=null)?+d.live_power.fleet_w:L.watts_fleet);
  if(d.fleet&&!fleetLoaded){fleetCache=d.fleet;fleetLoaded=true;renderFleet();}
  localLabel=lm.label||null;
  document.getElementById('sub').textContent=
   `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
   (d.snapshot_age_h!=null?` · price list ${d.snapshot_age_h<1?Math.round(d.snapshot_age_h*60)+' min':d.snapshot_age_h.toFixed(0)+' h'} old`:'')+
   (()=>{const es=d.energy_source||{};
-   if(es.mode==='integrated'){let s=` · power ${d.live_power&&d.live_power.fleet_w!=null?(+d.live_power.fleet_w).toFixed(1)+' W live · cost basis ':''}${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
+   if(es.mode==='integrated'){let s=` · power ${powerNow?(+powerNow).toFixed(1)+' W live · cost basis ':''}${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
     if(es.per_host)s+=' · '+Object.entries(es.per_host).map(([k,v])=>v?`${k} ${(+v.watts).toFixed(1)} W ${v.mode}`:`${k} n/d`).join(' · ');
     return s;}
    if(es.mode==='spot')return ' · power spot reading (sampler warming up)';
@@ -406,27 +407,21 @@ async function tick(force){ try{
  for(const k of ['n_sparks','usd_eur','idle_watts','assumed_tok_s','in_out_ratio','cache_hit_rate']){const el=document.getElementById('cfg_'+k); if(el&&document.activeElement!==el&&d.cfg[k]!=null)el.value=d.cfg[k];}
  const ao=document.getElementById('cfg_always_on'); if(ao&&document.activeElement!==ao)ao.checked=d.cfg.always_on!==false;
 
- // P54: numero+sparkline fleet power dalla serie LIVE del sampler (ultimo campione/host,
- // max 180s); fallback alla media 30-min (L.watts_fleet) se il sampler non ha dati freschi.
- // La media 30-min resta la base dei costi (footer: "cost basis").
- const powerNow=(d.live_power&&d.live_power.fleet_w!=null)?+d.live_power.fleet_w:L.watts_fleet;
- pushHist('power',powerNow);pushHist('eff',L.eff_eur_1m);
  // sparkline ONLY on fleet power (P52); gli altri meter sono senza tendenza
  let rpct=null;
  if(d.repaid){const rm=(d.repaid.models||[]).find(m=>m.model===cloudModel);
   if(rm&&rm.cloud_cached_eur!=null&&d.repaid.capex)rpct=Math.max(0,(rm.cloud_cached_eur-d.repaid.local_cost_eur))/d.repaid.capex*100;}
- if(rpct!=null)pushHist('repaid',rpct);
  const cards=[
   ['active units',(cfg.n_sparks||1)+' Spark',null,null],
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
   ['generated tokens (total)',fmt(+(d.ledger?d.ledger.gen_total:d.counters.gen_total)||0),null,null],
-  ['fleet power · all units',(powerNow||0).toFixed(1)+' W','power',PALETTE[0]],
+  ['fleet power · all units',(powerNow||0).toFixed(1)+' W',ppts,PALETTE[0]],
   ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M',null,PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
   ['tariff',cfg.eur_per_kwh+' €/kWh',null,null],
   ['repaid so far',rpct==null?'\u2014':rpct.toFixed(1)+'%',null,PALETTE[2]]];
  document.getElementById('cards').innerHTML=cards.map(c=>{
-  const spark=(c[2]&&hist[c[2]]&&hist[c[2]].length>1)?sparkline(c[2],c[3]):'';
+  const spark=Array.isArray(c[2])?sparkline(c[2],c[3]):'';
   const vc=c[3]?` style="color:${c[3]}"`:'';
   return `<div class="card"><div class="l">${c[0]}</div><div class="v"${vc}>${c[1]}</div>${spark}</div>`;
  }).join('');
@@ -506,6 +501,8 @@ function applyRateBtns(){document.querySelectorAll('.rt').forEach(b=>b.classList
 document.querySelectorAll('.rt').forEach(b=>b.addEventListener('click',()=>{
  rate=+b.dataset.s;localStorage.setItem('sparkcost.rate',rate);
  applyRateBtns();tick();
+ // P56: refresh periodico (30s = cadenza sampler; sparkDash polla a 2s via WS) — solo pagina visibile
+ setInterval(()=>{if(!document.hidden)tick();},30000);
 }));
 applyRateBtns();
 
@@ -621,8 +618,9 @@ class H(BaseHTTPRequestHandler):
             try:
                 rep = report(refresh=q.get("refresh") == ["1"],
                              local_key=(q.get("local") or [None])[0])
-                # P54: potenza fleet LIVE (ultimo campione sampler per host) per la card Dash
+                # P54/P56: potenza fleet live + SERIE RAW server-side (fonte unica card+sparkline)
                 rep["live_power"] = live_power()
+                rep["power_series"] = power_series()
                 payload = json.dumps(rep, indent=None, default=str)
                 self._send(200, payload.encode(), "application/json")
             except Exception as e:  # noqa: BLE001
