@@ -357,3 +357,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Nuova variabile --navact per entrambi i temi (dark #1a2027, light #dde3ea)
 - [x] VERIFICATO: screenshot dark+light, logo full-width, pill sull'attiva, 0 errori JS
 - Acceptance: logo largo come il frame + menu identico a sparkDash ✅
+
+### P51 — Logo dedicato al tema light ✅ (2026-10-23 07:13, owner request con allegato)
+- [x] Nuovo static/logo-light.jpg (dal logo inviato da Marco, ritagliato auto via PIL: crop contenuto + 4% margine) — testo scuro su fondo chiaro
+- [x] Logo dark ritagliato a sua volta (1124x540 da 1376x768) per riempire meglio il frame
+- [x] Endpoint GET /logo-light.jpg; swap automatico del src in applyTheme() secondo il tema (persistito anche al reload via localStorage)
+- [x] VERIFICATO: screenshot dark (logo chiaro su scuro) e light (logo scuro su chiaro) entrambi corretti; /logo-light.jpg 200 (91 KB); logo dark 200 (115 KB)
+- Acceptance: logo che si adatta al tema ✅

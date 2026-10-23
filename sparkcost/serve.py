@@ -25,6 +25,7 @@ from .stats import fleet_stats
 PORT = 8900
 
 LOGO = Path(__file__).resolve().parent / "static" / "logo.jpg"
+LOGO_LIGHT = Path(__file__).resolve().parent / "static" / "logo-light.jpg"  # P51: testo scuro per tema light
 # Trend palette: orange, cyan, violet, magenta, peach, light cyan
 PALETTE = ["#ff6a45", "#2ec8e8", "#8b7cf8", "#c76bd8", "#ffb08a", "#8adfff"]
 
@@ -113,7 +114,7 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
 <div class="wrap">
 <aside class="side">
- <div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
+ <div class="hdr"><img id="logoImg" src="/logo.jpg" alt="sparkcost"></div>
  <nav class="menu">
   <button class="navbtn active" data-view="dash" type="button">&#128202; Dash</button>
   <button class="navbtn" data-view="config" type="button">&#9881; Config</button>
@@ -288,7 +289,9 @@ document.getElementById('view-stats').addEventListener('click',async e=>{
  statsWin=+e.target.dataset.w; await loadStats();
 });
 
-function applyTheme(t){document.body.classList.toggle('light',t==='light');themeBtn.textContent=t==='light'?'🌙':'\u2600\uFE0F';try{localStorage.setItem('sc-theme',t)}catch(e){}}
+function applyTheme(t){document.body.classList.toggle('light',t==='light');themeBtn.textContent=t==='light'?'🌙':'\u2600\uFE0F';
+ const li=document.getElementById('logoImg'); if(li)li.src=t==='light'?'/logo-light.jpg':'/logo.jpg';
+ try{localStorage.setItem('sc-theme',t)}catch(e){}}
 applyTheme((()=>{const p=new URLSearchParams(location.search).get('theme');
  if(p==='light'||p==='dark')return p;
  try{return localStorage.getItem('sc-theme')||'dark'}catch(e){return 'dark'}})());
@@ -692,6 +695,12 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:  # noqa: BLE001
                 self._send(500, json.dumps({"error": str(e)}).encode(),
                            "application/json")
+        elif u.path == "/logo-light.jpg":
+            # P51: logo chiaro per il tema light (testo scuro su fondo chiaro)
+            if LOGO_LIGHT.exists():
+                self._send(200, LOGO_LIGHT.read_bytes(), "image/jpeg")
+            else:
+                self._send(404, b"logo not found", "text/plain")
         elif u.path == "/logo.jpg":
             try:
                 self._send(200, LOGO.read_bytes(), "image/jpeg")
