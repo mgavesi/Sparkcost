@@ -383,3 +383,9 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] JS: numero card + storico sparkline da powerNow (live, fallback L.watts_fleet se sampler fermo); footer distingue "X W live · cost basis Y W fleet" (la media 30min resta base dei costi)
 - [x] VERIFICATO LIVE: card 71.1 W = live_power.fleet_w 71.1 W stesso istante; footer "71.1 W live · cost basis 91.5 W fleet"; sparkline e numero ora coerenti per costruzione (stessa serie)
 - Acceptance: numero collegato alla sparkline ✅
+
+### P55 — Toggle tema in basso a sinistra ✅ (2026-10-23 09:04, owner request)
+- [x] .side flex-column a piena altezza viewport (height calc(100vh - 32px)); #themeBtn con margin-top:auto -> ancorato IN FONDO al frame sinistro, sotto il menu (come la luna di sparkDash)
+- [x] Mobile (<900px): sidebar torna statica e il bottone torna subito sotto il menu (height auto, margin 6px)
+- [x] VERIFICATO via CDP: btnFondoSide=true, btnSottoMenu=true, nelViewport=true (btn bottom 932 vs side bottom 949, viewport 957)
+- Acceptance: toggle in basso a sinistra ✅

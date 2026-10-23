@@ -38,7 +38,7 @@ font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px 24px 56px
 h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
 .hdr{margin-bottom:10px}
 .hdr img{width:100%;height:auto;max-height:110px;object-fit:contain;display:block}
-#themeBtn{display:inline-block;width:auto;background:transparent;color:var(--mut);border:none;border-radius:8px;padding:8px 10px;font-size:16px;cursor:pointer;margin:6px 0 0;line-height:1}
+#themeBtn{display:inline-block;width:auto;background:transparent;color:var(--mut);border:none;border-radius:8px;padding:8px 10px;font-size:16px;cursor:pointer;margin:auto 0 0;line-height:1;align-self:flex-start}
 #themeBtn:hover{color:var(--tx);background:var(--navact)}
 .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
@@ -57,7 +57,7 @@ tr.cheapest td{color:var(--warn)}
 td.num{text-align:right}th.num{text-align:right}
 td .basis{color:var(--mut);font-size:10px}
 .wrap{display:flex;gap:20px;align-items:flex-start}
-.side{width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px;position:sticky;top:16px}
+.side{width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px;position:sticky;top:16px;display:flex;flex-direction:column;height:calc(100vh - 32px);overflow-y:auto}
 .side .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
 .side .sech{display:block;color:var(--acc);font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin:16px 0 2px;border-bottom:1px solid var(--b);padding-bottom:3px;font-weight:700}
 .field{display:flex;align-items:center;gap:6px;margin-top:2px}
@@ -99,7 +99,7 @@ td .basis{color:var(--mut);font-size:10px}
 .winbtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer;margin:0}
 .winbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
 .main{flex:1;min-width:0}
-@media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static}}
+@media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static;height:auto}#themeBtn{margin:6px 0 0}}
 tr.hd-red th{background:#4a1520;color:#ffb08a}
 .bar .rt.on{color:var(--acc);border-color:var(--acc)}
 .bar .sep{flex:1}
