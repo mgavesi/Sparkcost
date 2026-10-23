@@ -99,7 +99,10 @@ td .basis{color:var(--mut);font-size:10px}
 .winbtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer;margin:0}
 .histwrap{margin:16px 0 18px;border:1px solid var(--b);border-radius:8px;padding:12px 14px 8px}
 .hist{display:flex;align-items:flex-end;gap:2px;height:150px}
-.hist .hbar{flex:1;min-height:1px;background:var(--acc);opacity:.72;border-radius:2px 2px 0 0}
+.hist .hbar{flex:1;min-height:1px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:2px 2px 0 0;overflow:hidden}
+.hseg{width:100%}
+.hlegend{display:flex;gap:16px;justify-content:center;margin-top:5px;font-size:10px;color:var(--mut)}
+.hchip{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .haxis{display:flex;justify-content:space-between;color:var(--mut);font-size:10px;margin-top:4px}
 .hcap{color:var(--mut);font-size:10px;text-align:center;margin-top:2px;opacity:.85}
 .winbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
@@ -257,19 +260,30 @@ function showView(v){
  document.addEventListener('DOMContentLoaded',()=>showView(v));})();
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 let statsWin=0;
-// P59: istogramma distribuzione fleet power (bins [upper_w,count] dal backend)
+// P60: istogramma distribuzione potenza host IMPILATA per modalita' (come la tabella):
+// bins [upper_w, inference, idle, unknown] dal backend; colori = PALETTE[0]/[1]/mut
 function histHtml(bins){
  if(!bins||bins.length<2)return '';
- const mx=Math.max(...bins.map(b=>b[1]),1);
+ const tot=b=>(b[1]||0)+(b[2]||0)+(b[3]||0);
+ const mx=Math.max(...bins.map(tot),1);
  const maxW=bins[bins.length-1][0]||1;
  const bw=maxW/bins.length;
+ const cols=['#ff6a45','#2ec8e8','var(--mut)'];
+ const names=['\u26a1 inference (running > 0)','💤 idle (running = 0)','? unknown (no flag)'];
  const bars=bins.map((b,i)=>{
-  const pct=mx?Math.round(b[1]/mx*100):0;
-  const tip=`${(bw*i).toFixed(0)}\u2013${(bw*(i+1)).toFixed(0)} W: ${b[1]} samples`;
-  return `<div class="hbar" style="height:${pct}%" title="${tip}"></div>`;}).join('');
+  const hTot=Math.round(tot(b)/mx*100);
+  const segs=[b[1]||0,b[2]||0,b[3]||0].map((c,k)=>{
+   if(!c)return '';
+   const pct=(tot(b)?c/tot(b)*100:0).toFixed(1);
+   const tip=`${(bw*i).toFixed(0)}\u2013${(bw*(i+1)).toFixed(0)} W \u00b7 ${names[k].replace(/^[^a-z?]+ /i,'')}: ${c} samples`;
+   return `<div class="hseg" style="height:${pct}%;background:${cols[k]}" title="${tip}"></div>`;}).join('');
+  if(!segs)return '';
+  return `<div class="hbar" style="height:${hTot}%">${segs}</div>`;}).join('');
+ const legend=names.map((n,k)=>`<span><span class="hchip" style="background:${cols[k]}"></span>${n}</span>`).join('');
  return `<div class="hist">${bars}</div>
   <div class="haxis"><span>0 W</span><span>${(maxW/2).toFixed(0)} W</span><span>${maxW.toFixed(0)} W</span></div>
-  <div class="hcap">fleet power distribution &mdash; host-summed samples</div>`;
+  <div class="hlegend">${legend}</div>
+  <div class="hcap">host power distribution by mode \u2014 stacked samples per bin</div>`;
 }
 async function loadStats(){
  const d=await(await fetch('/api/stats?window='+statsWin)).json();

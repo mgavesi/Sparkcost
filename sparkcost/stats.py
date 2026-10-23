@@ -45,29 +45,33 @@ def fleet_stats(window_s: int | None = None) -> dict | None:
     inf_n = idle_n = unk_n = 0
     inf_sum = idle_sum = unk_sum = 0.0
     inf_w = idle_w = unk_w = 0.0
+    inf_ws: list = []; idle_ws: list = []; unk_ws: list = []  # P60: watt host per modalità
     for ts, host, w, running in rows:
         per_ts[ts] = per_ts.get(ts, 0.0) + w
         per_host_w.setdefault(host, []).append(w)
         if running:
-            inf_n += 1; inf_sum += w; inf_w = max(inf_w, w)
+            inf_n += 1; inf_sum += w; inf_w = max(inf_w, w); inf_ws.append(w)
         elif running is not None:
-            idle_n += 1; idle_sum += w; idle_w = max(idle_w, w)
+            idle_n += 1; idle_sum += w; idle_w = max(idle_w, w); idle_ws.append(w)
         else:
-            unk_n += 1; unk_sum += w; unk_w = max(unk_w, w)
+            unk_n += 1; unk_sum += w; unk_w = max(unk_w, w); unk_ws.append(w)
 
     ts_sorted = sorted(per_ts)
     diffs = [b - a for a, b in zip(ts_sorted, ts_sorted[1:]) if b > a]
     cadence_s = sorted(diffs)[len(diffs) // 2] if diffs else 30
-    # P59: istogramma distribuzione fleet power (somma host per ts), 24 bin su [0, max]
+    # P60: istogramma distribuzione potenza HOST per modalita' (inference/idle/unknown),
+    # stessi 24 bin su [0, max host W]; il frontend le impila come la tabella
     hist_bins: list = []
-    if per_ts:
-        hmax = max(per_ts.values())
+    all_ws = inf_ws + idle_ws + unk_ws
+    if all_ws:
+        hmax = max(all_ws)
         nbins = 24
         width = max(hmax, 1.0) / nbins
-        counts = [0] * nbins
-        for v in per_ts.values():
-            counts[min(int(v / width), nbins - 1)] += 1
-        hist_bins = [[round((i + 1) * width, 1), counts[i]] for i in range(nbins)]
+        c_inf = [0] * nbins; c_idle = [0] * nbins; c_unk = [0] * nbins
+        for v in inf_ws: c_inf[min(int(v / width), nbins - 1)] += 1
+        for v in idle_ws: c_idle[min(int(v / width), nbins - 1)] += 1
+        for v in unk_ws: c_unk[min(int(v / width), nbins - 1)] += 1
+        hist_bins = [[round((i + 1) * width, 1), c_inf[i], c_idle[i], c_unk[i]] for i in range(nbins)]
     peak_ts_fleet = max((per_ts[ts] for ts in ts_sorted), default=0.0)
     # peak overall: max single-sample host watt OR max summed fleet ts
     peak_host_w = max((max(v) for v in per_host_w.values()), default=0.0)
@@ -87,7 +91,7 @@ def fleet_stats(window_s: int | None = None) -> dict | None:
                     "peak_host_w": unk_w or None},
         "energy_kwh_est": sum(per_ts.values()) * cadence_s / 3.6e6,
         "cadence_s": cadence_s,
-        "power_hist": {"bins": hist_bins, "total": len(per_ts)},
+        "power_hist": {"bins": hist_bins, "total": inf_n + idle_n + unk_n},
     }
 
 

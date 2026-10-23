@@ -420,3 +420,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Fix collaterale: sub non dice più fisso "cadence 30 s" ma usa la cadenza rilevata dal backend
 - [x] VERIFICATO: API 24 bin, 2067 timestamp (=4134 host samples, tornano al centesimo); render OK con forma bimodale leggibile (idle cluster + inference cluster); smoke test screenshot
 - Acceptance: istogramma in Statistics ✅
+
+### P60 — Statistics: istogramma impilato per modalità (inference/idle/unknown) ✅ (2026-10-23 11:32, owner request)
+- [x] Backend: fleet_stats() binna i WATT HOST per modalità (inf_ws/idle_ws/unk_ws raccolti nel loop), stessi 24 bin su [0, max host W]; bins=[upper_w, inf, idle, unk]; total = somma modalità (4242, tornano esatti)
+- [x] Frontend: barre impilate (flex column), colori = palette card (inference arancio PALETTE[0], idle ciano PALETTE[1], unknown grigio var(--mut)), legenda con label identiche alla tabella, tooltip per segmento
+- [x] Nota: l'asse max ora è 67 W (host) e non 126 W (fleet): coerente con la colonna "peak W (host)" della tabella
+- [x] BUGFIX: escape \ud83d\udca4 in stringa Python -> surrogate non encodabili (UnicodeEncodeError su OGNI richiesta HTML). Fix: emoji 💤 letterale. Lesson: in file .py serviti come HTML, mai escape surrogate JS-style dentro stringhe Python
+- [x] VERIFICATO: HTML encode OK (42809 B), HTTP 200, screenshot: stack corretto (idle ciano sinistra, inference arancio destra, unknown grigio), legenda, tooltip
+- Acceptance: istogramma con le 3 componenti della tabella ✅
