@@ -8,7 +8,15 @@ A self-hosted token-economics tool that answers one precise question: *given the
 
 ![sparkcost dashboard](docs/screenshot.png)
 
-*The dashboard: live cards (tokens, fleet power, effective €/1M), monthly-cost comparison against the cloud peer set, investment break-even with payback times, and the cumulative "repaid so far" ledger.*
+*The dashboard: live cards (tokens, live fleet power with sparkline, effective €/1M), monthly-cost comparison against the cloud peer set with AA scores, investment break-even with payback times, and the cumulative "repaid so far" ledger.*
+
+![sparkcost statistics](docs/screenshot-stats.png)
+
+*Statistics: fleet power distribution histogram stacked by mode (⚡ inference / 💤 idle / ? unknown), matching the per-mode table below — 24 bins over host watts, server-side computed.*
+
+![sparkcost config](docs/screenshot-config.png)
+
+*Configuration: every input parameter (investment, energy, usage, per-host power) with edit-in-place prices; the local-model selector shows its Artificial Analysis score.*
 
 ```
 ┌────────────┐   /metrics     ┌──────────────┐
