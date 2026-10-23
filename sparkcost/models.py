@@ -89,6 +89,15 @@ AA_SCORES = {
 }
 
 
+def aa_for_label(label: str | None) -> float | None:
+    """P61: punteggio AA per label. Il punteggio misura il MODELLO, non il
+    provider: le voci catalogo con suffisso ' (cloud)' valgono anche servite
+    in locale (stessi pesi, stesse capacità)."""
+    if not label:
+        return None
+    return AA_SCORES.get(label) or AA_SCORES.get(label + " (cloud)")
+
+
 def fetch_snapshot(force: bool = False) -> dict:
     """Load the local snapshot; download from GitHub if absent or --refresh."""
     if not force and SNAPSHOT.exists():
@@ -392,9 +401,11 @@ def resolve_local_model(data: dict, detected: str | None,
         for m in LOCAL_MODELS:
             if m["key"] == override_key:
                 return {"key": m["key"], "label": m["label"], "detected": False,
+                        "aa_score": aa_for_label(m["label"]),
                         "cloud_row": _row_for_key(data, m["key"], m["label"], m["vendor"])}
         # free-form key not in the catalog: still try to resolve it
         return {"key": override_key, "label": override_key, "detected": False,
+                "aa_score": aa_for_label(override_key),
                 "cloud_row": _row_for_key(data, override_key, override_key, "?")}
     if detected:
         low = detected.lower()
@@ -406,6 +417,7 @@ def resolve_local_model(data: dict, detected: str | None,
         if best:
             m = best[1]
             return {"key": m["key"], "label": m["label"], "detected": True,
+                    "aa_score": aa_for_label(m["label"]),
                     "cloud_row": _row_for_key(data, m["key"], m["label"], m["vendor"])}
     return {"key": None, "label": None, "detected": False, "cloud_row": None}
 

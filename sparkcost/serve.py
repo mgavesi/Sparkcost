@@ -376,7 +376,7 @@ if(aoEl)aoEl.addEventListener('change',async e=>{
 function buildLocalSelector(d){
  const sel=document.getElementById('locsel');
  const opts=[['','Auto-detect'+(d.server&&d.server.name?' ('+d.server.name+')':'')]];
- for(const o of (d.local_options||[]))opts.push([o.key,o.label]);
+ for(const o of (d.local_options||[]))opts.push([o.key,o.label+(o.aa_score!=null?'  —  AA '+o.aa_score.toFixed(1):'')]);
  sel.innerHTML='';
  for(const [v,t] of opts){
   const op=document.createElement('option');
@@ -419,7 +419,7 @@ async function tick(force){ try{
  if(d.fleet&&!fleetLoaded){fleetCache=d.fleet;fleetLoaded=true;renderFleet();}
  localLabel=lm.label||null;
  document.getElementById('sub').textContent=
-  `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
+  `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.aa_score!=null?' (AA '+lm.aa_score.toFixed(1)+')':''}${lm.detected?' (auto-detected)':''}`+
   (d.snapshot_age_h!=null?` · price list ${d.snapshot_age_h<1?Math.round(d.snapshot_age_h*60)+' min':d.snapshot_age_h.toFixed(0)+' h'} old`:'')+
   (()=>{const es=d.energy_source||{};
    if(es.mode==='integrated'){let s=` · power ${powerNow?(+powerNow).toFixed(1)+' W live · cost basis ':''}${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
@@ -475,7 +475,8 @@ async function tick(force){ try{
     `local month: ${eur(rp.local_month_eur)} = amortization ${eur(rp.local_month_parts.amort)} + idle energy ${eur(rp.local_month_parts.idle_energy)} + token energy ${eur(rp.local_month_parts.token_energy)} (fleet 24/7)`:
     `local month: ${eur(rp.local_month_eur)} (amortization ${eur(rp.amort_month_eur)} + energy ${eur(rp.energy_month_eur)}, fleet 24/7)`);
   const sel=rp.models.find(m=>m.model===cloudModel)||rp.models[0];
-  let rh=`<tr class="local"><td>→ LOCAL DGX Spark (fleet 24/7)</td><td class="num">${e1(rp.local_eur_1m)}</td><td class="num">—</td><td class="num">${eur(rp.local_month_eur)}</td><td class="num">—</td><td><span class="basis">amortization + energy, no volume cap</span></td></tr>`;
+  const lmAA=(d.local_model&&d.local_model.aa_score!=null)?` <span class="badge" title="Artificial Analysis Intelligence Index (benchlm.ai, 2026-10-20)">AA ${d.local_model.aa_score.toFixed(1)}</span>`:'';
+  let rh=`<tr class="local"><td>→ LOCAL DGX Spark (fleet 24/7)${d.local_model&&d.local_model.label?' — '+d.local_model.label+lmAA:''}</td><td class="num">${e1(rp.local_eur_1m)}</td><td class="num">—</td><td class="num">${eur(rp.local_month_eur)}</td><td class="num">—</td><td><span class="basis">amortization + energy, no volume cap</span></td></tr>`;
   if(sel){
    const mine=localLabel&&sel.model===localLabel;
    const ed=sel.edited?`<span class="badge" title="edited price">✎</span>`:'';

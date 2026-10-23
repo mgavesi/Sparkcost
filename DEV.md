@@ -428,3 +428,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] BUGFIX: escape \ud83d\udca4 in stringa Python -> surrogate non encodabili (UnicodeEncodeError su OGNI richiesta HTML). Fix: emoji 💤 letterale. Lesson: in file .py serviti come HTML, mai escape surrogate JS-style dentro stringhe Python
 - [x] VERIFICATO: HTML encode OK (42809 B), HTTP 200, screenshot: stack corretto (idle ciano sinistra, inference arancio destra, unknown grigio), legenda, tooltip
 - Acceptance: istogramma con le 3 componenti della tabella ✅
+
+### P61 — Punteggio AA anche per il modello locale ✅ (2026-10-23 11:42, owner request)
+- [x] models.aa_for_label(): lookup AA per label con fallback label+" (cloud)" — il punteggio misura il MODELLO, non il provider (stessi pesi/capacità serviti in locale)
+- [x] resolve_local_model(): aa_score in tutte le 3 branche (override, free-form, auto-detect); local_options con aa_score
+- [x] Frontend: footer "local model: X (AA 41.8) (auto-detected)"; selettore locale opzioni "— AA n.n"; riga LOCAL tabella mensile "— GLM 5.3 Flash [AA 41.8]" badge stile identico al cloud
+- [x] VERIFICATO: API local_model.aa_score=41.8; HTML encode OK; screenshot: badge sulla riga locale + footer
+- Acceptance: AA accanto al modello locale ✅

@@ -779,7 +779,7 @@ def report(do_measure: bool = False, refresh: bool = False,
             "energy_source": energy_source,
             "breakeven": bk, "local_model": local_model,
             "capex_eur": capex_total(cfg),
-            "local_options": [{"key": m["key"], "label": m["label"]}
+            "local_options": [{"key": m["key"], "label": m["label"], "aa_score": models.aa_for_label(m["label"])}
                               for m in models.LOCAL_MODELS],
             "snapshot_age_h": models.snapshot_age_h(),
             "price_overrides": {k: sorted(v.keys()) for k, v in ov.items()},
