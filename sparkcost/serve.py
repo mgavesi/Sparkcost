@@ -45,7 +45,7 @@ h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
 @media(max-width:1500px){.cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.cards{grid-template-columns:1fr}}
 .card{background:var(--card);border:1px solid var(--b);border-radius:12px;padding:16px 18px}
-.card .v{font-size:25px;font-weight:700}
+.card .v{font-size:32px;font-weight:700}
 .card .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
 .card svg{display:block;margin-top:8px;width:100%;height:30px}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--b);border-radius:10px;overflow:hidden;margin-bottom:8px}
@@ -417,7 +417,7 @@ async function tick(force){ try{
  const ao=document.getElementById('cfg_always_on'); if(ao&&document.activeElement!==ao)ao.checked=d.cfg.always_on!==false;
 
  pushHist('power',L.watts_fleet);pushHist('eff',L.eff_eur_1m);
- // sparklines ONLY on: fleet power, local effective
+ // sparkline ONLY on fleet power (P52); gli altri meter sono senza tendenza
  let rpct=null;
  if(d.repaid){const rm=(d.repaid.models||[]).find(m=>m.model===cloudModel);
   if(rm&&rm.cloud_cached_eur!=null&&d.repaid.capex)rpct=Math.max(0,(rm.cloud_cached_eur-d.repaid.local_cost_eur))/d.repaid.capex*100;}
@@ -427,10 +427,10 @@ async function tick(force){ try{
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
   ['generated tokens (total)',fmt(+(d.ledger?d.ledger.gen_total:d.counters.gen_total)||0),null,null],
   ['fleet power · all units',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
-  ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M','eff',PALETTE[5]],
+  ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M',null,PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
   ['tariff',cfg.eur_per_kwh+' €/kWh',null,null],
-  ['repaid so far',rpct==null?'\u2014':rpct.toFixed(1)+'%','repaid',PALETTE[2]]];
+  ['repaid so far',rpct==null?'\u2014':rpct.toFixed(1)+'%',null,PALETTE[2]]];
  document.getElementById('cards').innerHTML=cards.map(c=>{
   const spark=(c[2]&&hist[c[2]]&&hist[c[2]].length>1)?sparkline(c[2],c[3]):'';
   const vc=c[3]?` style="color:${c[3]}"`:'';

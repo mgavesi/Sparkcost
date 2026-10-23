@@ -364,3 +364,9 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Endpoint GET /logo-light.jpg; swap automatico del src in applyTheme() secondo il tema (persistito anche al reload via localStorage)
 - [x] VERIFICATO: screenshot dark (logo chiaro su scuro) e light (logo scuro su chiaro) entrambi corretti; /logo-light.jpg 200 (91 KB); logo dark 200 (115 KB)
 - Acceptance: logo che si adatta al tema ✅
+
+### P52 — Sparkline solo su fleet power + font maggiorato ✅ (2026-10-23 07:45, owner request)
+- [x] Sparkline di tendenza SOLO sulla card "fleet power · all units" (via da local effective e repaid so far: tengono il colore, perdono la tendenza)
+- [x] Valori delle 8 card del Dash: 25px -> 32px
+- [x] VERIFICATO: screenshot con solo fleet power sparklinata e carattere maggiore su tutti i meter
+- Acceptance: una sola sparkline + font grande ✅
