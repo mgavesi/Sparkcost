@@ -501,8 +501,8 @@ function applyRateBtns(){document.querySelectorAll('.rt').forEach(b=>b.classList
 document.querySelectorAll('.rt').forEach(b=>b.addEventListener('click',()=>{
  rate=+b.dataset.s;localStorage.setItem('sparkcost.rate',rate);
  applyRateBtns();tick();
- // P56: refresh periodico (30s = cadenza sampler; sparkDash polla a 2s via WS) — solo pagina visibile
- setInterval(()=>{if(!document.hidden)tick();},30000);
+ // P58: refresh 5s (sparkDash polla a 2s via WS; API ~50ms, sampler a 10s) — solo pagina visibile
+ setInterval(()=>{if(!document.hidden)tick();},5000);
 }));
 applyRateBtns();
 

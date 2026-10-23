@@ -406,3 +406,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Mobile <900px: bottone torna statico sotto il menu, footer senza padding extra
 - [x] VERIFICATO via CDP: onTop=true a scroll 0 E a fondo pagina (rect 24,707-66,741, viewport 757); screenshot fondo pagina conferma toggle sopra footer
 - Acceptance: toggle sempre visibile senza scroll ✅
+
+### P58 — Refresh fleet power veloce (cadenza sparkDash-like) ✅ (2026-10-23 11:11, owner request)
+- [x] Diagnosi: catena lenta = sampler 30s (systemd unit P40) + dashboard poll 30s -> fino a 60s percepiti; API /api/summary invece 53ms; sample_once costa 0.55s
+- [x] Fix systemd: sparkcost-sampler.service --loop 30 -> --loop 10 (daemon-reload + restart, unit preservata)
+- [x] Fix frontend: auto-refresh 30s -> 5s; power_series max_points 60 -> 180 (finestra ~30min preservata alla nuova cadenza)
+- [x] VERIFICATO: campioni freschi (eta 6s, gap 10-11s tra batch), serie 123 punti in transitorio (mediana scendera' a 10s man mano che i vecchi campioni a 30s escono dalla finestra 1h); smoke test render OK, footer 132 samples/30min
+- Acceptance: refresh percepito ~7s medi (prima ~45s) ✅

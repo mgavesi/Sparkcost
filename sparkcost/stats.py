@@ -79,9 +79,9 @@ def fleet_stats(window_s: int | None = None) -> dict | None:
     }
 
 
-def power_series(max_points: int = 60, max_age_s: int = 3600) -> dict | None:
+def power_series(max_points: int = 180, max_age_s: int = 3600) -> dict | None:
     """P56, modello sparkDash (metricsStore/ringBuffer): serie RAW fleet power
-    = somma sui host per ogni ts del sampler, coda di max_points (~30 min a 30s).
+    = somma sui host per ogni ts del sampler, coda di max_points (~30 min: 180 @ 10s, P58).
     FONTE UNICA server-side per valore card + sparkline: il browser non accumula
     piu' storia locale (niente mix di vecchie medie 30-min con punti live)."""
     if not DB.exists() or DB.stat().st_size == 0:
