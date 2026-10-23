@@ -349,3 +349,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] VERIFICATO LIVE: 3 viste HTTP 200; stats: fleet mean 100.7 W, peak 122.9 W, peak host 65.8 W, inference 66 samples mean 54.1 W vs idle 8 samples mean 11.7 W, unknown 906 (pre-flag); 0 errori JS
 - Bugfix: come P47, emoji 💤 come escape \ud83d\udca4 nel JS → surrogate Python → UnicodeEncodeError su HTML.encode; risolto con emoji reali
 - Acceptance: 3 menu funzionanti, statistics con media/picco/eventi inference-idle ✅
+
+### P50 — Logo full-width + menu stile sparkDash ✅ (2026-10-23 06:51, owner request)
+- [x] Logo sparkcost a PIENA LARGHEZZA del frame sinistro (width:100%, max-height 110px, object-fit contain); themeBtn spostato sotto il menu come il toggle luna di sparkDash
+- [x] Menu stile sparkDash: sans-serif 14px (ui-sans-serif stack), voci grigie senza bordo, hover pill --navact, voce attiva con pill background + peso 600 (come "Overview" su sparkDash)
+- [x] Bugfix specificità: la regola generica `.side button` (0,1,1) batteva `.navbtn` (0,1,0) mantenendo i bordi verdi → override con `.side .menu .navbtn`
+- [x] Nuova variabile --navact per entrambi i temi (dark #1a2027, light #dde3ea)
+- [x] VERIFICATO: screenshot dark+light, logo full-width, pill sull'attiva, 0 errori JS
+- Acceptance: logo largo come il frame + menu identico a sparkDash ✅

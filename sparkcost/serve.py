@@ -30,14 +30,15 @@ PALETTE = ["#ff6a45", "#2ec8e8", "#8b7cf8", "#c76bd8", "#ffb08a", "#8adfff"]
 
 HTML = """<!doctype html><html><head><meta charset="utf-8">
 <title>sparkcost</title><style>
-:root{--bg:#000;--card:#0d0d0f;--tx:#dbe4ee;--mut:#7d8ea0;--acc:#4ade80;--b:#1c1c22;--warn:#fbbf24;--thbg:#0f2a1c;--inputbg:#000}
-body.light{--bg:#eef1f5;--card:#fff;--tx:#1b2530;--mut:#5c6b7a;--acc:#0b8f4d;--b:#d7dde4;--warn:#b45309;--thbg:#e2f3ea;--inputbg:#fff}
+:root{--bg:#000;--card:#0d0d0f;--tx:#dbe4ee;--mut:#7d8ea0;--acc:#4ade80;--b:#1c1c22;--warn:#fbbf24;--thbg:#0f2a1c;--inputbg:#000;--navact:#1a2027}
+body.light{--bg:#eef1f5;--card:#fff;--tx:#1b2530;--mut:#5c6b7a;--acc:#0b8f4d;--b:#d7dde4;--warn:#b45309;--thbg:#e2f3ea;--inputbg:#fff;--navact:#dde3ea}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
 font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px 24px 56px}
 h2{font-size:14px;margin:26px 0 10px;color:var(--tx)}
-.hdr{margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.hdr img{height:44px;max-width:calc(100% - 60px);object-fit:contain;display:block}
-#themeBtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:5px 9px;font-size:15px;cursor:pointer;flex-shrink:0;line-height:1;margin:0}
+.hdr{margin-bottom:10px}
+.hdr img{width:100%;height:auto;max-height:110px;object-fit:contain;display:block}
+#themeBtn{display:inline-block;width:auto;background:transparent;color:var(--mut);border:none;border-radius:8px;padding:8px 10px;font-size:16px;cursor:pointer;margin:6px 0 0;line-height:1}
+#themeBtn:hover{color:var(--tx);background:var(--navact)}
 .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 @media(max-width:1500px){.cards{grid-template-columns:repeat(2,1fr)}}
@@ -75,9 +76,10 @@ td .basis{color:var(--mut);font-size:10px}
 #fleetMsg{font-size:10px;color:var(--acc)}
 .fres{font-size:10px;color:var(--acc);grid-column:1/-1;min-height:12px}
 .side .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
-.menu{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-.navbtn{display:block;width:100%;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:10px 12px;font:inherit;font-size:13px;cursor:pointer;text-align:left;margin:0}
-.navbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
+.menu{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.side .menu .navbtn{display:block;width:100%;background:transparent;color:var(--mut);border:1px solid transparent;border-radius:8px;padding:9px 12px;font:500 14px/1.3 ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;cursor:pointer;text-align:left;margin:0;letter-spacing:0;box-shadow:none}
+.side .menu .navbtn:hover{background:var(--navact);color:var(--tx)}
+.side .menu .navbtn.active{background:var(--navact);color:var(--tx);font-weight:600;border-color:transparent}
 .view[hidden]{display:none}
 .cgrid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:0 28px;align-items:start}
 @media(max-width:1200px){.cgrid{grid-template-columns:1fr 1fr}}
@@ -111,12 +113,13 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
 </style></head><body>
 <div class="wrap">
 <aside class="side">
- <div class="hdr"><img src="/logo.jpg" alt="sparkcost"><button id="themeBtn" type="button" title="dark / light">&#9728;&#65039;</button></div>
+ <div class="hdr"><img src="/logo.jpg" alt="sparkcost"></div>
  <nav class="menu">
   <button class="navbtn active" data-view="dash" type="button">&#128202; Dash</button>
   <button class="navbtn" data-view="config" type="button">&#9881; Config</button>
   <button class="navbtn" data-view="stats" type="button">&#9889; Statistics</button>
  </nav>
+ <button id="themeBtn" type="button" title="dark / light">&#9728;&#65039;</button>
 </aside>
 <div class="main">
 <div id="view-dash" class="view">
