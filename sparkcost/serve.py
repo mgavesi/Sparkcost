@@ -97,6 +97,11 @@ td .basis{color:var(--mut);font-size:10px}
 .winrow{display:flex;gap:6px;align-items:center;margin-bottom:14px}
 .winrow .lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
 .winbtn{display:inline-block;width:auto;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer;margin:0}
+.histwrap{margin:16px 0 18px;border:1px solid var(--b);border-radius:8px;padding:12px 14px 8px}
+.hist{display:flex;align-items:flex-end;gap:2px;height:150px}
+.hist .hbar{flex:1;min-height:1px;background:var(--acc);opacity:.72;border-radius:2px 2px 0 0}
+.haxis{display:flex;justify-content:space-between;color:var(--mut);font-size:10px;margin-top:4px}
+.hcap{color:var(--mut);font-size:10px;text-align:center;margin-top:2px;opacity:.85}
 .winbtn.active{border-color:var(--acc);color:var(--acc);font-weight:700}
 .main{flex:1;min-width:0}
 @media (max-width:900px){.wrap{flex-direction:column}.side{width:100%;position:static;height:auto}#themeBtn{position:static;margin:6px 0 0;box-shadow:none}.footer{padding-left:24px}}
@@ -193,6 +198,7 @@ padding:8px 24px 8px 84px;font-size:12px;color:var(--mut);z-index:9}
    <button class="winbtn" data-w="86400" type="button">24 h</button>
    <button class="winbtn" data-w="604800" type="button">7 d</button></div>
   <div class="cards" id="statcards"></div>
+  <div class="histwrap" id="stathist"></div>
   <table><thead><tr><th>mode</th><th class="num">samples</th><th class="num">mean W (host)</th><th class="num">peak W (host)</th></tr></thead>
   <tbody id="statrows"></tbody></table>
   <div class="sub">inference = sample with the monitored server reporting requests_running &gt; 0 &middot; idle = requests_running == 0 &middot; samples with the server unreachable are excluded from the split but kept in the overall mean/peak &middot; unknown = samples predating the P49 flag &middot; energy estimated at the sampler cadence &middot; peak W is the max summed fleet power in one sample</div>
@@ -251,6 +257,20 @@ function showView(v){
  document.addEventListener('DOMContentLoaded',()=>showView(v));})();
 document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 let statsWin=0;
+// P59: istogramma distribuzione fleet power (bins [upper_w,count] dal backend)
+function histHtml(bins){
+ if(!bins||bins.length<2)return '';
+ const mx=Math.max(...bins.map(b=>b[1]),1);
+ const maxW=bins[bins.length-1][0]||1;
+ const bw=maxW/bins.length;
+ const bars=bins.map((b,i)=>{
+  const pct=mx?Math.round(b[1]/mx*100):0;
+  const tip=`${(bw*i).toFixed(0)}\u2013${(bw*(i+1)).toFixed(0)} W: ${b[1]} samples`;
+  return `<div class="hbar" style="height:${pct}%" title="${tip}"></div>`;}).join('');
+ return `<div class="hist">${bars}</div>
+  <div class="haxis"><span>0 W</span><span>${(maxW/2).toFixed(0)} W</span><span>${maxW.toFixed(0)} W</span></div>
+  <div class="hcap">fleet power distribution &mdash; host-summed samples</div>`;
+}
 async function loadStats(){
  const d=await(await fetch('/api/stats?window='+statsWin)).json();
  if(d.error){document.getElementById('statssub').textContent='error: '+d.error;return;}
@@ -258,12 +278,14 @@ async function loadStats(){
  const f=n=>n==null?'\u2014':(+n).toFixed(1);
  const ek=n=>n==null?'\u2014':(+n).toFixed(2)+' kWh';
  const span=d.window_s?`${Math.round(d.window_s/60)} min window`:'';
- document.getElementById('statssub').textContent=`${d.samples} host samples over ${span} \u00b7 cadence 30 s`;
+ const cad=d.cadence_s?Math.round(d.cadence_s)+' s':'n/d';
+ document.getElementById('statssub').textContent=`${d.samples} host samples over ${span} \u00b7 cadence ${cad}`;
  const cards=[['fleet mean power',f(d.fleet_mean_w)+' W',null,null],
   ['fleet peak power',f(d.fleet_peak_w)+' W',null,null],
   ['peak single host',f(d.peak_sample_w)+' W',null,null],
   ['energy (window)',ek(d.energy_kwh_est),null,null]];
  document.getElementById('statcards').innerHTML=cards.map(c=>`<div class="card"><div class="l">${c[0]}</div><div class="v">${c[1]}</div></div>`).join('');
+ document.getElementById('stathist').innerHTML=histHtml((d.power_hist||{}).bins);
  const row=(lbl,m)=>`<tr><td>${lbl}</td><td class="num">${m.samples}</td><td class="num">${m.mean_host_w==null?'\u2014':f(m.mean_host_w)+' W'}</td><td class="num">${m.peak_host_w==null?'\u2014':f(m.peak_host_w)+' W'}</td></tr>`;
  document.getElementById('statrows').innerHTML=
   row('\u26a1 inference (running &gt; 0)',d.inference||{samples:0})+

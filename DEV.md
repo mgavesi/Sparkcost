@@ -413,3 +413,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Fix frontend: auto-refresh 30s -> 5s; power_series max_points 60 -> 180 (finestra ~30min preservata alla nuova cadenza)
 - [x] VERIFICATO: campioni freschi (eta 6s, gap 10-11s tra batch), serie 123 punti in transitorio (mediana scendera' a 10s man mano che i vecchi campioni a 30s escono dalla finestra 1h); smoke test render OK, footer 132 samples/30min
 - Acceptance: refresh percepito ~7s medi (prima ~45s) ✅
+
+### P59 — Statistics: istogramma distribuzione fleet power ✅ (2026-10-23 11:22, owner request)
+- [x] stats.fleet_stats(): power_hist = 24 bin della distribuzione fleet (somma host per ts, range [0,max]) + cadence_s esposta
+- [x] Frontend: div .histwrap con barre CSS theme-aware (var(--acc)), asse 0/metà/max W, tooltip per bin (range W: N samples), caption
+- [x] Fix collaterale: sub non dice più fisso "cadence 30 s" ma usa la cadenza rilevata dal backend
+- [x] VERIFICATO: API 24 bin, 2067 timestamp (=4134 host samples, tornano al centesimo); render OK con forma bimodale leggibile (idle cluster + inference cluster); smoke test screenshot
+- Acceptance: istogramma in Statistics ✅
