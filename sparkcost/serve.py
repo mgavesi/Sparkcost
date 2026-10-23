@@ -182,7 +182,7 @@ padding:8px 24px 8px 84px;font-size:12px;color:var(--mut);z-index:9}
  <div class="cparam"><span class="lbl">Cloud model</span>
  <select id="cloudsel"></select></div>
  <div class="cparam"><span class="lbl">Local model</span>
- <select id="locsel"><option value="">Auto-detect&hellip;</option></select></div>
+ <select id="locsel"><option value="">Auto-detect&hellip;</option></select> <span class="badge" id="locAAbadge" style="display:none" title="Artificial Analysis Intelligence Index (benchlm.ai, 2026-10-20)"></span></div>
  <span id="locwarn"></span>
  <button id="resetBtn" title="Restore online price list">&#8634; Reset prices</button>
  <button id="refreshBtn">&#8635; Refresh prices</button>
@@ -412,6 +412,10 @@ async function tick(force){ try{
  const d=await(await fetch('/api/summary'+q)).json();
  if(d.error){document.getElementById('sub').textContent='error: '+d.error;return;}
  const L=d.local, cfg=d.cfg, rp=d.replay, lm=d.local_model||{};
+ // P62: etichetta AA del modello locale corrente accanto al selettore in Config
+ const locAA=document.getElementById('locAAbadge');
+ if(locAA){locAA.textContent=lm.label?`${lm.label}${lm.aa_score!=null?' \u00b7 AA '+lm.aa_score.toFixed(1):''}`:'';
+  locAA.style.display=lm.label?'':'none';}
  // P56: fonte unica power = serie RAW dal sampler (ultimo punto = valore card)
  const ppts=(d.power_series&&d.power_series.points)||[];
  const powerNow=(d.power_series&&d.power_series.last_w!=null)?+d.power_series.last_w

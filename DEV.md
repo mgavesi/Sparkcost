@@ -435,3 +435,9 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Frontend: footer "local model: X (AA 41.8) (auto-detected)"; selettore locale opzioni "— AA n.n"; riga LOCAL tabella mensile "— GLM 5.3 Flash [AA 41.8]" badge stile identico al cloud
 - [x] VERIFICATO: API local_model.aa_score=41.8; HTML encode OK; screenshot: badge sulla riga locale + footer
 - Acceptance: AA accanto al modello locale ✅
+
+### P62 — Config: etichetta AA del modello locale ✅ (2026-10-23 11:55, owner request)
+- [x] Badge #locAAbadge accanto al selettore locale in Config: "GLM 5.3 Flash · AA 41.8" (stile .badge, title con fonte)
+- [x] Aggiornato a ogni tick: segue auto-detect E override manuale (nascosto se nessun modello risolto)
+- [x] VERIFICATO: screenshot Config — badge sotto il selettore, verde accento; HTML encode OK; JS OK
+- Acceptance: etichetta AA del locale in Config ✅
