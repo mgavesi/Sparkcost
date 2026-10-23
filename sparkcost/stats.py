@@ -77,3 +77,31 @@ def fleet_stats(window_s: int | None = None) -> dict | None:
                     "peak_host_w": unk_w or None},
         "energy_kwh_est": sum(per_ts.values()) * cadence_s / 3.6e6,
     }
+
+
+def live_power(max_age_s: int = 180) -> dict | None:
+    """P54: fleet power LIVE dal sampler = somma dell'ultimo campione per host
+    (solo host con un campione entro max_age_s). None se nessun dato fresco."""
+    if not DB.exists() or DB.stat().st_size == 0:
+        return None
+    con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    try:
+        now = int(time.time())
+        rows = con.execute(
+            "SELECT host,watts,ts FROM power WHERE watts IS NOT NULL AND ts>=? "
+            "ORDER BY host,ts DESC", (now - max_age_s,)).fetchall()
+    except sqlite3.OperationalError:
+        return None
+    finally:
+        con.close()
+    if not rows:
+        return None
+    latest: dict[str, tuple[float, int]] = {}
+    for host, w, ts in rows:  # ordinato per host,ts DESC: primo hit = piu' recente
+        if host not in latest:
+            latest[host] = (float(w), int(ts))
+    if not latest:
+        return None
+    return {"fleet_w": sum(w for w, _ in latest.values()),
+            "ts": max(ts for _, ts in latest.values()),
+            "per_host": {h: {"watts": w, "age_s": now - ts} for h, (w, ts) in latest.items()}}

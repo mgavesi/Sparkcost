@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .localcost import report, save_capex, save_tariff, save_hours, save_amort_years, save_depreciation, save_users, save_n_sparks, save_cfg_params, save_price, clear_price
 from .collect import save_fleet, test_fleet_host
-from .stats import fleet_stats
+from .stats import fleet_stats, live_power
 
 PORT = 8900
 
@@ -385,7 +385,7 @@ async function tick(force){ try{
   `${d.server.backend||'?'} :${d.server.port||'?'} · ${d.server.model||'?'} · local model: ${lm.label||'?'}${lm.detected?' (auto-detected)':''}`+
   (d.snapshot_age_h!=null?` · price list ${d.snapshot_age_h<1?Math.round(d.snapshot_age_h*60)+' min':d.snapshot_age_h.toFixed(0)+' h'} old`:'')+
   (()=>{const es=d.energy_source||{};
-   if(es.mode==='integrated'){let s=` · power ${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
+   if(es.mode==='integrated'){let s=` · power ${d.live_power&&d.live_power.fleet_w!=null?(+d.live_power.fleet_w).toFixed(1)+' W live · cost basis ':''}${(+L.watts_fleet).toFixed(1)} W fleet = ${(+L.watts).toFixed(1)} W/unit × ${L.n_sparks} units, time-weighted over ${Math.round(es.span_s/60)} min (${es.samples} samples)`;
     if(es.per_host)s+=' · '+Object.entries(es.per_host).map(([k,v])=>v?`${k} ${(+v.watts).toFixed(1)} W ${v.mode}`:`${k} n/d`).join(' · ');
     return s;}
    if(es.mode==='spot')return ' · power spot reading (sampler warming up)';
@@ -406,7 +406,11 @@ async function tick(force){ try{
  for(const k of ['n_sparks','usd_eur','idle_watts','assumed_tok_s','in_out_ratio','cache_hit_rate']){const el=document.getElementById('cfg_'+k); if(el&&document.activeElement!==el&&d.cfg[k]!=null)el.value=d.cfg[k];}
  const ao=document.getElementById('cfg_always_on'); if(ao&&document.activeElement!==ao)ao.checked=d.cfg.always_on!==false;
 
- pushHist('power',L.watts_fleet);pushHist('eff',L.eff_eur_1m);
+ // P54: numero+sparkline fleet power dalla serie LIVE del sampler (ultimo campione/host,
+ // max 180s); fallback alla media 30-min (L.watts_fleet) se il sampler non ha dati freschi.
+ // La media 30-min resta la base dei costi (footer: "cost basis").
+ const powerNow=(d.live_power&&d.live_power.fleet_w!=null)?+d.live_power.fleet_w:L.watts_fleet;
+ pushHist('power',powerNow);pushHist('eff',L.eff_eur_1m);
  // sparkline ONLY on fleet power (P52); gli altri meter sono senza tendenza
  let rpct=null;
  if(d.repaid){const rm=(d.repaid.models||[]).find(m=>m.model===cloudModel);
@@ -416,7 +420,7 @@ async function tick(force){ try{
   ['active units',(cfg.n_sparks||1)+' Spark',null,null],
   ['prompt tokens (total)',fmt(+(d.ledger?d.ledger.prompt_total:d.counters.prompt_total)||0),null,null],
   ['generated tokens (total)',fmt(+(d.ledger?d.ledger.gen_total:d.counters.gen_total)||0),null,null],
-  ['fleet power · all units',(L.watts_fleet||0).toFixed(1)+' W','power',PALETTE[0]],
+  ['fleet power · all units',(powerNow||0).toFixed(1)+' W','power',PALETTE[0]],
   ['local effective (measured)','€'+(+L.eff_eur_1m).toFixed(2)+'/1M',null,PALETTE[5]],
   ['monthly fixed','€'+(+L.fixed_month_eur).toFixed(0),null,null],
   ['tariff',cfg.eur_per_kwh+' €/kWh',null,null],
@@ -617,6 +621,8 @@ class H(BaseHTTPRequestHandler):
             try:
                 rep = report(refresh=q.get("refresh") == ["1"],
                              local_key=(q.get("local") or [None])[0])
+                # P54: potenza fleet LIVE (ultimo campione sampler per host) per la card Dash
+                rep["live_power"] = live_power()
                 payload = json.dumps(rep, indent=None, default=str)
                 self._send(200, payload.encode(), "application/json")
             except Exception as e:  # noqa: BLE001

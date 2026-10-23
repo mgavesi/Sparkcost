@@ -376,3 +376,10 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Bug 2 (Save fuori finestra): #fleetSave ereditava width:100% da .cgrid button e traboccava a destra di + add. Fix: .fbtns in colonna (Save SOTTO add) + override larghezza auto.
 - [x] VERIFICATO programmaticamente (CDP): tutti i 13 parametri lblX==inpX (stessa x per colonna: 324/751/1177); saveSottoAdd=true, saveDentroBox=true, saveLarghezzaAuto=true. Screenshot conferma.
 - Acceptance: parametri allineati + Save sotto add dentro la finestra ✅
+
+### P54 — Fleet power LIVE: numero card = sparkline ✅ (2026-10-23 08:48, owner request)
+- [x] Diagnosi: la card usava L.watts_fleet = media pesata temporale ultimi 30 min (base costi) che lagga la realtà fino a mezz'ora; la sparkline invece mostrava la discesa reale -> numero (105 W) non coerente con tendenza (21 W live segnalati da Marco)
+- [x] Fix: stats.live_power() = somma dell'ULTIMO campione per host dal sampler (max age 180s, else None); iniettata in /api/summary come rep["live_power"]
+- [x] JS: numero card + storico sparkline da powerNow (live, fallback L.watts_fleet se sampler fermo); footer distingue "X W live · cost basis Y W fleet" (la media 30min resta base dei costi)
+- [x] VERIFICATO LIVE: card 71.1 W = live_power.fleet_w 71.1 W stesso istante; footer "71.1 W live · cost basis 91.5 W fleet"; sparkline e numero ora coerenti per costruzione (stessa serie)
+- Acceptance: numero collegato alla sparkline ✅
