@@ -72,8 +72,8 @@ td .basis{color:var(--mut);font-size:10px}
 .frow{display:grid;grid-template-columns:1.2fr 62px 52px;gap:4px;margin:6px 0;border:1px solid var(--b);border-radius:6px;padding:6px}
 .frow input,.frow select{width:100%;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:6px;padding:4px 6px;font:inherit;font-size:11px;box-sizing:border-box}
 .frow button{display:inline-block;width:auto;padding:4px 8px;margin:0;font-size:11px}
-.fbtns{display:flex;gap:6px;align-items:center;margin-top:6px}
-.fbtns button{width:auto;display:inline-block;padding:6px 10px;margin:0;flex:0 0 auto}
+.fbtns{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:6px}
+.cgrid .fbtns button,.side .fbtns button{width:auto;display:inline-block;padding:6px 12px;margin:0;flex:0 0 auto}
 #fleetMsg{font-size:10px;color:var(--acc)}
 .fres{font-size:10px;color:var(--acc);grid-column:1/-1;min-height:12px}
 .side .chip{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px;cursor:pointer}
@@ -85,6 +85,7 @@ td .basis{color:var(--mut);font-size:10px}
 .cgrid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:0 28px;align-items:start}
 @media(max-width:1200px){.cgrid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.cgrid{grid-template-columns:1fr}}
+.cparam{min-width:0}.cparam select{width:100%;box-sizing:border-box}
 .cgrid .lbl{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px}
 .cgrid .field input,.cgrid select{flex:1;min-width:0;background:var(--inputbg);color:var(--tx);border:1px solid var(--b);border-radius:8px;padding:6px 8px;font:inherit;font-size:12px;box-sizing:border-box}
 .cgrid .field input:focus,.cgrid select:focus{border-color:var(--acc);outline:none}
@@ -154,38 +155,27 @@ padding:8px 24px;font-size:12px;color:var(--mut);z-index:9}
   <div class="cgrid">
  
  <span class="sech">Investment &amp; fleet</span>
- <span class="lbl">Investment &euro;</span>
- <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div>
- <span class="lbl">Number of machines</span>
- <div class="field"><input id="cfg_n_sparks" type="number" step="1" min="1" max="64"><span class="saved" id="cfgsaved_n_sparks"></span></div>
- <span class="lbl">Idle W / unit</span>
- <div class="field"><input id="cfg_idle_watts" type="number" step="1" min="1" max="2000"><span class="saved" id="cfgsaved_idle_watts"></span></div>
- <span class="lbl">USD &rarr; EUR</span>
- <div class="field"><input id="cfg_usd_eur" type="number" step="0.01" min="0" max="10"><span class="saved" id="cfgsaved_usd_eur"></span></div>
+ <div class="cparam"><span class="lbl">Investment &euro;</span> <div class="field"><input id="capex" type="number" step="0.01" min="0" placeholder="8856.94"><span class="saved" id="capexsaved"></span></div></div>
+ <div class="cparam"><span class="lbl">Number of machines</span> <div class="field"><input id="cfg_n_sparks" type="number" step="1" min="1" max="64"><span class="saved" id="cfgsaved_n_sparks"></span></div></div>
+ <div class="cparam"><span class="lbl">Idle W / unit</span> <div class="field"><input id="cfg_idle_watts" type="number" step="1" min="1" max="2000"><span class="saved" id="cfgsaved_idle_watts"></span></div></div>
+ <div class="cparam"><span class="lbl">USD &rarr; EUR</span> <div class="field"><input id="cfg_usd_eur" type="number" step="0.01" min="0" max="10"><span class="saved" id="cfgsaved_usd_eur"></span></div></div>
  <span class="sech">Energy &amp; usage</span>
- <span class="lbl">Energy &euro;/kWh</span>
- <div class="field"><input id="tariff" type="number" step="0.01" min="0" placeholder="0.28"><span class="saved" id="tariffsaved"></span></div>
- <span class="lbl">Hours/day</span>
- <div class="field"><input id="hours" type="number" step="0.5" min="0" max="24" placeholder="8"><span class="saved" id="hourssaved"></span></div>
- <span class="lbl">Amort years</span>
- <div class="field"><input id="amort" type="number" step="1" min="1" max="15" placeholder="5"><span class="saved" id="amortsaved"></span></div>
+ <div class="cparam"><span class="lbl">Energy &euro;/kWh</span> <div class="field"><input id="tariff" type="number" step="0.01" min="0" placeholder="0.28"><span class="saved" id="tariffsaved"></span></div></div>
+ <div class="cparam"><span class="lbl">Hours/day</span> <div class="field"><input id="hours" type="number" step="0.5" min="0" max="24" placeholder="8"><span class="saved" id="hourssaved"></span></div></div>
+ <div class="cparam"><span class="lbl">Amort years</span> <div class="field"><input id="amort" type="number" step="1" min="1" max="15" placeholder="5"><span class="saved" id="amortsaved"></span></div></div>
  <label class="chip" title="fleet powered 24/7: idle energy counts on all hours">
   <input id="cfg_always_on" type="checkbox"> Always on 24/7</label><span class="saved" id="cfgsaved_always_on"></span>
  <label class="chip" id="deprchip" title="uncheck if the Spark was bought privately: capex not depreciated, local cost = energy only">
   <input id="depr" type="checkbox" checked> Depreciate</label>
- <span class="lbl">Fallback tok/s (idle server)</span>
- <div class="field"><input id="cfg_assumed_tok_s" type="number" step="1" min="1" max="100000"><span class="saved" id="cfgsaved_assumed_tok_s"></span></div>
- <span class="lbl">In:Out token ratio</span>
- <div class="field"><input id="cfg_in_out_ratio" type="number" step="1" min="1" max="1000"><span class="saved" id="cfgsaved_in_out_ratio"></span></div>
- <span class="lbl">Cache hit rate (0-1)</span>
- <div class="field"><input id="cfg_cache_hit_rate" type="number" step="0.01" min="0" max="1"><span class="saved" id="cfgsaved_cache_hit_rate"></span></div>
- <span class="lbl">Cluster users</span>
- <div class="field"><input id="users" type="number" step="1" min="1" max="50" placeholder="2"><span class="saved" id="userssaved"></span></div>
+ <div class="cparam"><span class="lbl">Fallback tok/s (idle server)</span> <div class="field"><input id="cfg_assumed_tok_s" type="number" step="1" min="1" max="100000"><span class="saved" id="cfgsaved_assumed_tok_s"></span></div></div>
+ <div class="cparam"><span class="lbl">In:Out token ratio</span> <div class="field"><input id="cfg_in_out_ratio" type="number" step="1" min="1" max="1000"><span class="saved" id="cfgsaved_in_out_ratio"></span></div></div>
+ <div class="cparam"><span class="lbl">Cache hit rate (0-1)</span> <div class="field"><input id="cfg_cache_hit_rate" type="number" step="0.01" min="0" max="1"><span class="saved" id="cfgsaved_cache_hit_rate"></span></div></div>
+ <div class="cparam"><span class="lbl">Cluster users</span> <div class="field"><input id="users" type="number" step="1" min="1" max="50" placeholder="2"><span class="saved" id="userssaved"></span></div></div>
  <span class="sech">Models</span>
- <span class="lbl">Cloud model</span>
- <select id="cloudsel"></select>
- <span class="lbl">Local model</span>
- <select id="locsel"><option value="">Auto-detect&hellip;</option></select>
+ <div class="cparam"><span class="lbl">Cloud model</span>
+ <select id="cloudsel"></select></div>
+ <div class="cparam"><span class="lbl">Local model</span>
+ <select id="locsel"><option value="">Auto-detect&hellip;</option></select></div>
  <span id="locwarn"></span>
  <button id="resetBtn" title="Restore online price list">&#8634; Reset prices</button>
  <button id="refreshBtn">&#8635; Refresh prices</button>

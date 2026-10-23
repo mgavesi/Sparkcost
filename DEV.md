@@ -370,3 +370,9 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Valori delle 8 card del Dash: 25px -> 32px
 - [x] VERIFICATO: screenshot con solo fleet power sparklinata e carattere maggiore su tutti i meter
 - Acceptance: una sola sparkline + font grande ✅
+
+### P53 — Fix layout Config: allineamento parametri + Save cluster ✅ (2026-10-23 08:12, owner request)
+- [x] Bug 1 (disallineamento): nella cgrid lbl e field erano DUE celle grid separate -> le label fluivano in colonne sbagliate. Fix: ogni parametro wrappato in <div class="cparam"> (13/13, incluse le 2 select MODELS) = UN solo grid item; select width:100%.
+- [x] Bug 2 (Save fuori finestra): #fleetSave ereditava width:100% da .cgrid button e traboccava a destra di + add. Fix: .fbtns in colonna (Save SOTTO add) + override larghezza auto.
+- [x] VERIFICATO programmaticamente (CDP): tutti i 13 parametri lblX==inpX (stessa x per colonna: 324/751/1177); saveSottoAdd=true, saveDentroBox=true, saveLarghezzaAuto=true. Screenshot conferma.
+- Acceptance: parametri allineati + Save sotto add dentro la finestra ✅
