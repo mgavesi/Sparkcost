@@ -398,3 +398,11 @@ Cost per 1M local tokens = (€/kWh × average kW) / (tok/s × 3600) × 1e6, com
 - [x] Bugfix refactor: "key is not defined" (gid) + punti ora coppie [ts,w] -> vals estratti
 - [x] VERIFICATO LIVE: card 23.3 W = power_series.last_w stesso istante; sparkline discesa reale 119->23 W su 60 punti; footer live/cost basis; 0 errori render
 - Acceptance: numero e sparkline stessa serie server-side + aggiornamento automatico ✅
+
+### P57 — Toggle tema sempre visibile (fixed viewport) ✅ (2026-10-23 10:18, owner request)
+- [x] Requisito: il toggle ancorato al fondo della sidebar (P55) richiedeva scroll per essere visto -> diventa position:fixed bottom-left del VIEWPORT: sempre visibile, scroll o no
+- [x] Bug 1: il footer di stato (position:fixed full-width, z-index 9) copriva il bottone (z5) -> z-index 10 + padding-left riservato nel footer (84px)
+- [x] Bug 2: onTop=false nonostante z10 -> il bottone era dentro aside.side (sticky) che crea stacking context proprio; spostato a livello body, prima del footer
+- [x] Mobile <900px: bottone torna statico sotto il menu, footer senza padding extra
+- [x] VERIFICATO via CDP: onTop=true a scroll 0 E a fondo pagina (rect 24,707-66,741, viewport 757); screenshot fondo pagina conferma toggle sopra footer
+- Acceptance: toggle sempre visibile senza scroll ✅
